@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
 
     # frontend_base_url: str = "http://localhost:5173"
-    frontend_base_url: str = "https://stevesaimachinetest.netlify.app/"
+    frontend_base_url: str = "https://stevesaimachinetest.netlify.app"
     default_gemini_api_key: str = "AIzaSyC2NZ7UAGHzxMeZCg8m2TpeHWVKS6H-9dw"
 
     # Format: email:password,email2:password2
