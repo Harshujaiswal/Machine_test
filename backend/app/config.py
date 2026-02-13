@@ -9,7 +9,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 8
     invite_token_expire_hours: int = 6
 
-    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/machine_test"
+    # database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/machine_test"
+
+    database_url: str = Field(
+        default="postgresql+psycopg2://postgres:postgres@localhost:5432/machine_test",
+        validation_alias=AliasChoices("DATABASE_URL", "database_url"),
+    )
 
     smtp_host: str = Field(
         default="smtp.gmail.com",
