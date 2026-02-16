@@ -1,5 +1,7 @@
 import ast
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -44,8 +46,30 @@ def _validate_code(code: str):
                 raise ValueError(f"Call '{node.func.id}' is not allowed")
 
 
+def _resolve_python_cmd() -> str | None:
+    # Prefer the interpreter running the backend process.
+    candidates = [sys.executable, "python3", "python"]
+    for cmd in candidates:
+        if not cmd:
+            continue
+        if cmd == sys.executable:
+            return cmd
+        if shutil.which(cmd):
+            return cmd
+    return None
+
+
 def run_python_code(code: str, stdin: str = "", timeout: int = 5):
     _validate_code(code)
+
+    python_cmd = _resolve_python_cmd()
+    if not python_cmd:
+        return {
+            "stdout": "",
+            "stderr": "Python interpreter not found on server.",
+            "return_code": -1,
+            "timed_out": False,
+        }
 
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = Path(tmpdir) / "solution.py"
@@ -53,7 +77,7 @@ def run_python_code(code: str, stdin: str = "", timeout: int = 5):
 
         try:
             result = subprocess.run(
-                ["python", str(file_path)],
+                [python_cmd, str(file_path)],
                 input=stdin,
                 text=True,
                 capture_output=True,
@@ -73,4 +97,10 @@ def run_python_code(code: str, stdin: str = "", timeout: int = 5):
                 "return_code": -1,
                 "timed_out": True,
             }
-
+        except OSError as exc:
+            return {
+                "stdout": "",
+                "stderr": f"Execution failed: {exc}",
+                "return_code": -1,
+                "timed_out": False,
+            }

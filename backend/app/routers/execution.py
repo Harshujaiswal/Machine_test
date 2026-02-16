@@ -17,6 +17,8 @@ def execute_python(payload: PythonExecuteIn):
         raise HTTPException(status_code=400, detail=f"Syntax error: {e}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Python execution failed: {e}")
 
 
 @router.post("/sql", response_model=SQLExecuteOut)
