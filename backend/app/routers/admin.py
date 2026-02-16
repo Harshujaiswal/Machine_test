@@ -83,7 +83,6 @@ def invite_candidate(
     invite_link = f"{settings.frontend_base_url}/candidate/{token}"
     expires_at_str = expires_at.strftime("%d %b %Y, %I:%M %p UTC")
     test_level_label = (candidate.test_level or "").capitalize()
-    marks_label = str(candidate.interview_marks) if candidate.interview_marks is not None else "Not specified"
     send_email(
         to_email=candidate.email,
         subject="Machine Test Invitation",
@@ -92,7 +91,6 @@ def invite_candidate(
             "You have been invited to take the Machine Test Platform assessment.\n\n"
             f"Test level: {test_level_label}\n"
             f"Test duration: {candidate.test_duration_minutes} minutes\n"
-            f"Interview marks: {marks_label}\n"
             f"Invite link: {invite_link}\n"
             f"Link expires at: {expires_at_str}\n\n"
             "Important:\n"
@@ -114,7 +112,6 @@ def invite_candidate(
             "<div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;\">"
             f"<div><strong>Test level:</strong> {test_level_label}</div>"
             f"<div><strong>Test duration:</strong> {candidate.test_duration_minutes} minutes</div>"
-            f"<div><strong>Interview marks:</strong> {marks_label}</div>"
             f"<div><strong>Link expiry:</strong> {expires_at_str}</div>"
             "</div>"
             f"<p style=\"margin:18px 0;\"><a href=\"{invite_link}\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;\">Start Test</a></p>"
