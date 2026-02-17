@@ -1,4 +1,4 @@
-# Machine Test Platform (No Docker)
+# Machine Test Platform
 
 Full-stack platform with:
 - FastAPI + PostgreSQL + SQLAlchemy
