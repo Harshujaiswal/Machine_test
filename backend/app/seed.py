@@ -353,6 +353,12 @@ def seed_questions(db):
     if existing_signature == expected_signature and len(existing_questions) == len(expected_signature):
         return
 
+    # Never wipe candidate answers on startup.
+    # If submissions already exist, keep current question rows as-is.
+    has_submissions = db.query(Submission.id).first() is not None
+    if has_submissions:
+        return
+
     db.query(Submission).delete()
     db.query(Question).delete()
 
