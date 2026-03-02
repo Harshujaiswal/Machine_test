@@ -2,18 +2,26 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, setAuthToken } from "../api";
 
+const REVIEWER_OPTIONS = [
+  { name: "HARSH JAISWAL", email: "harshjaiswal.linuxban@gmail.com" },
+  { name: "RAHUL", email: "rahulparihar.stevesai@gmail.com" },
+];
+
 export default function AdminDashboard() {
   const [invite, setInvite] = useState({
     name: "",
     email: "",
     test_level: "intermediate",
     interview_marks: "",
+    interviewer_name: "",
+    reviewer_emails: [],
     test_duration_minutes: 60,
   });
   const [inviteResult, setInviteResult] = useState("");
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState(null);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [geminiKey, setGeminiKey] = useState("");
@@ -44,6 +52,12 @@ export default function AdminDashboard() {
     loadGeminiKey();
   }, []);
 
+  useEffect(() => {
+    if (!inviteNotice) return;
+    const timer = setTimeout(() => setInviteNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [inviteNotice]);
+
   async function loadGeminiKey() {
     try {
       const { data } = await api.get("/admin/settings/gemini-key");
@@ -57,14 +71,29 @@ export default function AdminDashboard() {
     }
   }
 
+  function toggleReviewer(email) {
+    setInvite((prev) => {
+      const has = prev.reviewer_emails.includes(email);
+      return {
+        ...prev,
+        reviewer_emails: has
+          ? prev.reviewer_emails.filter((x) => x !== email)
+          : [...prev.reviewer_emails, email],
+      };
+    });
+  }
+
   async function sendInvite(e) {
     e.preventDefault();
     setInviteResult("");
+    setInviteNotice(null);
     setError("");
     setInviteLoading(true);
     try {
       const payload = {
         ...invite,
+        interviewer_name: invite.interviewer_name.trim() || null,
+        reviewer_emails: invite.reviewer_emails,
         test_duration_minutes: Number(invite.test_duration_minutes),
         interview_marks:
           invite.interview_marks === "" || invite.interview_marks === null
@@ -78,11 +107,16 @@ export default function AdminDashboard() {
         email: "",
         test_level: "intermediate",
         interview_marks: "",
+        interviewer_name: "",
+        reviewer_emails: [],
         test_duration_minutes: 60,
       });
       await loadSubmissions();
+      setInviteNotice({ type: "success", title: "Invite Sent", message: `Invite sent to ${payload.name} (${payload.email}) successfully.` });
     } catch (err) {
-      setError(err?.response?.data?.detail || "Invite failed");
+      const msg = err?.response?.data?.detail || "Invite failed";
+      setError(msg);
+      setInviteNotice({ type: "error", title: "Invite Failed", message: msg });
     } finally {
       setInviteLoading(false);
     }
@@ -113,8 +147,15 @@ export default function AdminDashboard() {
     setError("");
     try {
       await api.put("/admin/settings/gemini-key", { gemini_api_key: geminiKey });
+      setInviteNotice({
+        type: "success",
+        title: "Gemini Key Saved",
+        message: "Gemini API key updated successfully.",
+      });
     } catch (err) {
-      setError(err?.response?.data?.detail || "Failed to save Gemini API key");
+      const msg = err?.response?.data?.detail || "Failed to save Gemini API key";
+      setError(msg);
+      setInviteNotice({ type: "error", title: "Save Failed", message: msg });
     } finally {
       setGeminiLoading(false);
     }
@@ -159,6 +200,38 @@ export default function AdminDashboard() {
   }
 
   return (
+    <>
+
+      {inviteNotice && (
+        <div className="fixed right-4 top-4 z-50 w-[min(92vw,380px)]">
+          <div
+            className={`rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur ${
+              inviteNotice.type === "success"
+                ? "border-emerald-200 bg-emerald-50/95 text-emerald-900"
+                : "border-red-200 bg-red-50/95 text-red-900"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold">
+                  {inviteNotice.title || (inviteNotice.type === "success" ? "Success" : "Error")}
+                </p>
+                <p className="mt-1 text-xs leading-5">{inviteNotice.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInviteNotice(null)}
+                className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-black/5"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-slate-100 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -199,7 +272,7 @@ export default function AdminDashboard() {
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-xl font-semibold text-slate-900">Invite Candidate</h2>
               <p className="mt-1 text-xs text-slate-500">Create and configure a secure invite in one step.</p>
-              <form onSubmit={sendInvite} className="mt-4 space-y-3">
+                            <form onSubmit={sendInvite} className="mt-4 space-y-3">
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Candidate Name
@@ -271,6 +344,36 @@ export default function AdminDashboard() {
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-brand-500"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Interviewer Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Who took interview"
+                    value={invite.interviewer_name}
+                    onChange={(e) => setInvite({ ...invite, interviewer_name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none transition focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Reviewer Notifications
+                  </p>
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    {REVIEWER_OPTIONS.map((item) => (
+                      <label key={item.email} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={invite.reviewer_emails.includes(item.email)}
+                          onChange={() => toggleReviewer(item.email)}
+                          className="h-4 w-4"
+                        />
+                        <span>{item.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <button
                   disabled={inviteLoading}
                   className="w-full rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -292,29 +395,6 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               )}
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Gemini API Key
-                </p>
-                <input
-                  type="text"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="Paste Gemini API key"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
-                />
-                <button
-                  type="button"
-                  disabled={geminiLoading}
-                  onClick={saveGeminiKey}
-                  className="mt-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900 disabled:opacity-60"
-                >
-                  {geminiLoading ? "Saving..." : "Save Gemini Key"}
-                </button>
-                <p className="mt-2 text-xs text-slate-500">
-                  GenAI questions in candidate test will use this key after page reload.
-                </p>
-              </div>
               {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             </div>
           </div>
@@ -357,9 +437,17 @@ export default function AdminDashboard() {
                             <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
                               Interview Marks: {item.interview_marks === null ? "-" : item.interview_marks}
                             </span>
+                            <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                              Interviewer: {item.interviewer_name || "-"}
+                            </span>
                             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                               Machine Test Marks: {item.machine_test_marks ?? 0}
                             </span>
+                            {item.reviewer_names?.length > 0 && (
+                              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                                Reviewers: {item.reviewer_names.join(", ")}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -395,7 +483,34 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Gemini API Key</h3>
+              <p className="mt-1 text-xs text-slate-500">Candidate GenAI questions will use this key after page reload.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+            <input
+              type="text"
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              placeholder="Paste Gemini API key"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:bg-white"
+            />
+            <button
+              type="button"
+              disabled={geminiLoading}
+              onClick={saveGeminiKey}
+              className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-60"
+            >
+              {geminiLoading ? "Saving..." : "Save Gemini Key"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+    </>
   );
 }

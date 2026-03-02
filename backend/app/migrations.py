@@ -15,6 +15,10 @@ def run_sqlite_migrations(db, database_url: str):
         db.execute(text("ALTER TABLE candidates ADD COLUMN test_level TEXT DEFAULT 'intermediate'"))
     if "interview_marks" not in candidate_cols:
         db.execute(text("ALTER TABLE candidates ADD COLUMN interview_marks INTEGER"))
+    if "interviewer_name" not in candidate_cols:
+        db.execute(text("ALTER TABLE candidates ADD COLUMN interviewer_name TEXT"))
+    if "reviewer_emails" not in candidate_cols:
+        db.execute(text("ALTER TABLE candidates ADD COLUMN reviewer_emails TEXT"))
     if "test_duration_minutes" not in candidate_cols:
         db.execute(text("ALTER TABLE candidates ADD COLUMN test_duration_minutes INTEGER DEFAULT 60"))
     if "test_started_at" not in candidate_cols:

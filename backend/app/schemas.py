@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Token(BaseModel):
@@ -19,6 +19,8 @@ class InviteCandidateRequest(BaseModel):
     email: EmailStr
     test_level: Literal["fresher", "intermediate", "high"]
     interview_marks: Optional[int] = None
+    interviewer_name: Optional[str] = None
+    reviewer_emails: List[EmailStr] = Field(default_factory=list)
     test_duration_minutes: Literal[60, 90, 120, 180] = 60
 
 
@@ -87,6 +89,8 @@ class CandidateSubmissionGroup(BaseModel):
     candidate_email: EmailStr
     test_level: str
     interview_marks: Optional[int] = None
+    interviewer_name: Optional[str] = None
+    reviewer_names: List[str] = Field(default_factory=list)
     test_duration_minutes: int
     submission_reason: Optional[str] = None
     submitted_at: Optional[datetime] = None
@@ -110,9 +114,11 @@ class CandidateQuestionAnswerItem(BaseModel):
 class CandidateSubmissionDetailOut(BaseModel):
     candidate_id: int
     candidate_name: str
-    candidate_email: EmailStr
+    candidate_email: str
     test_level: str
     interview_marks: Optional[int] = None
+    interviewer_name: Optional[str] = None
+    reviewer_names: List[str] = Field(default_factory=list)
     test_duration_minutes: int
     submission_reason: Optional[str] = None
     submitted_at: Optional[datetime] = None

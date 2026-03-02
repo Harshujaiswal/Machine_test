@@ -27,6 +27,8 @@ class Candidate(Base):
     is_submitted = Column(Boolean, default=False)
     test_level = Column(String(20), nullable=False, default="intermediate")
     interview_marks = Column(Integer, nullable=True)
+    interviewer_name = Column(String(255), nullable=True)
+    reviewer_emails = Column(Text, nullable=True)
     test_duration_minutes = Column(Integer, nullable=False, default=60)
     test_started_at = Column(DateTime, nullable=True)
     submission_reason = Column(String(50), nullable=True)

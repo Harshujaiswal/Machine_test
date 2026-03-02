@@ -15,6 +15,12 @@ router = APIRouter(prefix="/candidate", tags=["Candidate"])
 GEMINI_KEY_SETTING = "gemini_api_key"
 
 
+REVIEWER_EMAIL_TO_NAME = {
+    "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
+    "rahulparihar.stevesai@gmail.com": "RAHUL",
+}
+
+
 def _get_candidate_by_token(db: Session, token: str, require_not_submitted: bool = False) -> Candidate:
     candidate = db.query(Candidate).filter(Candidate.invite_token == token).first()
     if not candidate:
@@ -24,6 +30,16 @@ def _get_candidate_by_token(db: Session, token: str, require_not_submitted: bool
     if require_not_submitted and candidate.is_submitted:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Test already submitted")
     return candidate
+
+
+def _parse_reviewer_emails(csv_value: str | None) -> list[str]:
+    if not csv_value:
+        return []
+    cleaned: list[str] = []
+    for email in [x.strip().lower() for x in csv_value.split(",") if x.strip()]:
+        if email not in cleaned:
+            cleaned.append(email)
+    return cleaned
 
 
 @router.get("/token/{token}", response_model=CandidateSessionOut)
@@ -168,5 +184,33 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
             "</div>"
         ),
     )
+
+    reviewer_emails = _parse_reviewer_emails(candidate.reviewer_emails)
+    for reviewer_email in reviewer_emails:
+        reviewer_name = REVIEWER_EMAIL_TO_NAME.get(reviewer_email, "REVIEWER")
+        send_email(
+            to_email=reviewer_email,
+            subject=f"Candidate Submitted Test - {candidate.name}",
+            body=(
+                f"Hi {reviewer_name},\n\n"
+                f"Candidate {candidate.name} ({candidate.email}) has submitted the machine test.\n"
+                f"Test level: {candidate.test_level}\n"
+                f"Submission type: {reason_text}\n"
+                f"Submitted at: {submitted_at_str}\n\n"
+                f"Please review on admin dashboard: {settings.frontend_base_url}/admin/dashboard"
+            ),
+            html_body=(
+                "<div style=\"font-family:Arial,sans-serif;background:#f8fafc;padding:20px;color:#0f172a;\">"
+                "<div style=\"max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;\">"
+                f"<p style=\"margin:0 0 8px;\">Hi <strong>{reviewer_name}</strong>,</p>"
+                f"<p style=\"margin:0 0 10px;\">Candidate <strong>{candidate.name}</strong> ({candidate.email}) has submitted the machine test.</p>"
+                f"<p style=\"margin:0;\"><strong>Test level:</strong> {candidate.test_level}</p>"
+                f"<p style=\"margin:0;\"><strong>Submission type:</strong> {reason_text}</p>"
+                f"<p style=\"margin:0 0 12px;\"><strong>Submitted at:</strong> {submitted_at_str}</p>"
+                f"<p style=\"margin:0;\"><a href=\"{settings.frontend_base_url}/admin/dashboard\" style=\"color:#2563eb;text-decoration:none;font-weight:600;\">Open Admin Dashboard</a></p>"
+                "</div>"
+                "</div>"
+            ),
+        )
 
     return {"message": "Submission recorded successfully"}

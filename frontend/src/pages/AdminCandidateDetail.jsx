@@ -169,6 +169,10 @@ export default function AdminCandidateDetail() {
                 Level: {data.test_level} | Interview Marks:{" "}
                 {data.interview_marks === null ? "-" : data.interview_marks}
               </p>
+              <p className="text-sm text-slate-600">Interviewer: {data.interviewer_name || "-"}</p>
+              <p className="text-sm text-slate-600">
+                Reviewers: {data.reviewer_names?.length ? data.reviewer_names.join(", ") : "-"}
+              </p>
               <p className="text-sm text-slate-600">Timer: {data.test_duration_minutes} minutes</p>
               <p className="text-sm text-slate-600">
                 Machine Test Marks: {data.machine_test_marks ?? totalMachineTestMarks}

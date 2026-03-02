@@ -34,6 +34,7 @@ export default function CandidateTest() {
   const [testStarted, setTestStarted] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const warningCountRef = useRef(0);
   const violationLockRef = useRef(false);
   const graceUntilRef = useRef(0);
@@ -236,9 +237,25 @@ export default function CandidateTest() {
     }
   }
 
+  function confirmAndSubmit() {
+    if (submitting) return;
+    setShowSubmitConfirm(true);
+  }
+
+  function handleCancelSubmit() {
+    setShowSubmitConfirm(false);
+  }
+
+  function handleConfirmSubmit() {
+    if (submitting) return;
+    setShowSubmitConfirm(false);
+    submitTest(false);
+  }
+
   async function submitTest(isAutoSubmit = false, reason = null) {
     if (isAutoSubmit && submitting) return;
     setSubmitting(true);
+    setShowSubmitConfirm(false);
     setError("");
     try {
       const sourceAnswers = isAutoSubmit ? answersRef.current : answers;
@@ -526,6 +543,33 @@ export default function CandidateTest() {
           </div>
         ))}
 
+        {showSubmitConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+              <h3 className="text-lg font-semibold text-slate-900">Submit Test?</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Are you sure you want to submit your test? You will not be able to edit answers after submit.
+              </p>
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelSubmit}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSubmit}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+                >
+                  Yes, Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
             <p className="text-sm text-slate-700">
@@ -535,7 +579,7 @@ export default function CandidateTest() {
               {error && <p className="text-sm text-red-600">{error}</p>}
               <button
                 disabled={submitting}
-                onClick={() => submitTest(false)}
+                onClick={confirmAndSubmit}
                 className="rounded-lg bg-brand-600 px-5 py-2 text-white hover:bg-brand-700 disabled:opacity-60"
               >
                 {submitting ? "Submitting..." : "Submit Test"}

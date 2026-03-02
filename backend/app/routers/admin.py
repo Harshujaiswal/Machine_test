@@ -12,8 +12,8 @@ from ..email_utils import send_email
 from ..models import AppSetting, Candidate, EvaluationMark, Question, Submission
 from ..schemas import (
     CandidateQuestionAnswerItem,
-    CandidateSubmissionGroup,
     CandidateSubmissionDetailOut,
+    CandidateSubmissionGroup,
     CandidateSubmissionItem,
     GeminiAPIKeyIn,
     GeminiAPIKeyOut,
@@ -27,6 +27,50 @@ from ..schemas import (
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 GEMINI_KEY_SETTING = "gemini_api_key"
+REVIEWER_DIRECTORY = {
+    "HARSH JAISWAL": "harshjaiswal.linuxbean@gmail.com",
+    "RAHUL": "rahulparihar.stevesai@gmail.com",
+}
+EMAIL_TO_REVIEWER_NAME = {
+    "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
+    "rahulparihar.stevesai@gmail.com": "RAHUL",
+}
+
+
+def _normalize_reviewer_emails(reviewer_emails: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    allowed = {"harshjaiswal.linuxbean@gmail.com", "harshjaiswal.linuxbean@gmail.com", "rahulparihar.stevesai@gmail.com"}
+    for email in reviewer_emails:
+        clean = (email or "").strip().lower()
+        if not clean:
+            continue
+        if clean not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Reviewer email not allowed: {email}",
+            )
+        if clean in seen:
+            continue
+        seen.add(clean)
+        normalized.append(clean)
+    return normalized
+
+
+def _reviewer_names_from_csv(csv_value: str | None) -> list[str]:
+    if not csv_value:
+        return []
+    names: list[str] = []
+    for email in [x.strip().lower() for x in csv_value.split(",") if x.strip()]:
+        mapped = EMAIL_TO_REVIEWER_NAME.get(email)
+        if mapped and mapped not in names:
+            names.append(mapped)
+    return names
+
+
+@router.get("/reviewer-options")
+def get_reviewer_options(_admin=Depends(get_current_admin)):
+    return [{"name": name, "email": email} for name, email in REVIEWER_DIRECTORY.items()]
 
 
 @router.get("/settings/gemini-key", response_model=GeminiAPIKeyOut)
@@ -58,6 +102,7 @@ def invite_candidate(
 ):
     token = uuid4().hex
     expires_at = datetime.utcnow() + timedelta(hours=settings.invite_token_expire_hours)
+    reviewer_emails = _normalize_reviewer_emails([str(e) for e in payload.reviewer_emails])
 
     candidate = Candidate(
         name=payload.name,
@@ -66,6 +111,8 @@ def invite_candidate(
         token_expires_at=expires_at,
         test_level=payload.test_level,
         interview_marks=payload.interview_marks,
+        interviewer_name=(payload.interviewer_name or "").strip() or None,
+        reviewer_emails=",".join(reviewer_emails) if reviewer_emails else None,
         test_duration_minutes=payload.test_duration_minutes,
         is_submitted=False,
     )
@@ -183,6 +230,8 @@ def get_submissions(db: Session = Depends(get_db), _admin=Depends(get_current_ad
                 candidate_email=candidate.email,
                 test_level=candidate.test_level,
                 interview_marks=candidate.interview_marks,
+                interviewer_name=candidate.interviewer_name,
+                reviewer_names=_reviewer_names_from_csv(candidate.reviewer_emails),
                 test_duration_minutes=candidate.test_duration_minutes,
                 submission_reason=candidate.submission_reason,
                 submitted_at=candidate.submitted_at,
@@ -250,6 +299,8 @@ def get_candidate_submission_detail(
         candidate_email=candidate.email,
         test_level=candidate.test_level,
         interview_marks=candidate.interview_marks,
+        interviewer_name=candidate.interviewer_name,
+        reviewer_names=_reviewer_names_from_csv(candidate.reviewer_emails),
         test_duration_minutes=candidate.test_duration_minutes,
         submission_reason=candidate.submission_reason,
         submitted_at=candidate.submitted_at,
