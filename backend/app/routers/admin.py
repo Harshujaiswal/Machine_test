@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 
+from openai import OpenAI
+
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +14,8 @@ from ..deps import get_current_admin, get_db
 from ..email_utils import send_email
 from ..models import AppSetting, Candidate, EvaluationMark, Question, Submission
 from ..schemas import (
+    AIAutoGradeIn,
+    AIAutoGradeOut,
     CandidateQuestionAnswerItem,
     CandidateSubmissionDetailOut,
     CandidateSubmissionGroup,
@@ -32,6 +37,7 @@ REVIEWER_DIRECTORY = {
     "RAHUL": "rahulparihar.stevesai@gmail.com",
 }
 EMAIL_TO_REVIEWER_NAME = {
+    "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
     "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
     "rahulparihar.stevesai@gmail.com": "RAHUL",
 }
@@ -126,7 +132,6 @@ def invite_candidate(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Candidate with this email already exists. Use a different email or delete old entry first.",
         )
-
     invite_link = f"{settings.frontend_base_url}/candidate/{token}"
     expires_at_str = expires_at.strftime("%d %b %Y, %I:%M %p UTC")
     test_level_label = (candidate.test_level or "").capitalize()
@@ -134,16 +139,16 @@ def invite_candidate(
         to_email=candidate.email,
         subject="Machine Test Invitation",
         body=(
-            f"Hi {candidate.name},\n\n"
-            "You have been invited to take the Machine Test Platform assessment.\n\n"
-            f"Test level: {test_level_label}\n"
-            f"Test duration: {candidate.test_duration_minutes} minutes\n"
-            f"Invite link: {invite_link}\n"
-            f"Link expires at: {expires_at_str}\n\n"
-            "Important:\n"
-            "- Use this unique link only once.\n"
-            "- Keep stable internet during the test.\n"
-            "- Fullscreen policy may be enforced.\n\n"
+            f"Hi {candidate.name},"
+            "You have been invited to take the Machine Test Platform assessment."
+            f"Test level: {test_level_label}"
+            f"Test duration: {candidate.test_duration_minutes} minutes"
+            f"Invite link: {invite_link}"
+            f"Link expires at: {expires_at_str}"
+            "Important:"
+            "- Use this unique link only once."
+            "- Keep stable internet during the test."
+            "- Fullscreen policy may be enforced."
             "Best of luck."
         ),
         html_body=(
@@ -187,6 +192,57 @@ def delete_candidate(candidate_id: int, db: Session = Depends(get_db), _admin=De
     db.commit()
     return {"message": "Candidate deleted successfully"}
 
+
+
+OPENAI_GRADING_SYSTEM = (
+    "You are a strict but fair technical evaluator. "
+    "Grade each answer on a 0-2 scale based on correctness, completeness, and clarity.beause the total of this test is 10 marks, so each question can be graded with 0, 1,1.5, or 2 marks."
+    "Return ONLY valid JSON with schema: {\"items\": [{\"question_id\": int, \"score\": int, \"feedback\": string}]}. for each answer feedback, provide a brief comment on why you gave that score and how the answer could be correqtly answered if it was not fully correct." 
+    "If an answer is not correct only mark based on logic and approach and than create feedback based on that,"
+    "Please be strict give the marks under the total of 10 marks and go to total output above the 10 marks so please assign marks of each question carefully."
+    "If an answer is not correct right 0 marks this and some logic are assign only logic marks like 0.50 etc"
+    "If an answer is empty or irrelevant, score 0 with short feedback."
+)
+
+
+def _call_openai_responses(messages: list[dict]) -> str:
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OPENAI_API_KEY is not configured")
+    client = OpenAI(api_key=settings.openai_api_key)
+    try:
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"OpenAI request failed: {e}")
+
+    try:
+        content = response.choices[0].message.content or ""
+    except Exception:
+        content = ""
+    if not content.strip():
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="OpenAI returned empty response content")
+    return content
+
+
+def _extract_json_block(text: str) -> dict | None:
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+    if not text:
+        return None
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        return json.loads(text[start : end + 1])
+    except Exception:
+        return None
 
 @router.get("/submissions", response_model=list[CandidateSubmissionGroup])
 def get_submissions(db: Session = Depends(get_db), _admin=Depends(get_current_admin)):
@@ -355,3 +411,74 @@ def save_candidate_marks(
         .scalar()
     )
     return {"message": "Machine test marks saved successfully", "machine_test_marks": int(total_marks or 0)}
+
+@router.post("/submissions/{candidate_id}/ai-grade", response_model=AIAutoGradeOut)
+def ai_grade_candidate(candidate_id: int, payload: AIAutoGradeIn | None = None, db: Session = Depends(get_db), _admin=Depends(get_current_admin)):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    questions = (
+        db.query(Question)
+        .filter(Question.level == candidate.test_level)
+        .order_by(Question.order_no.asc())
+        .all()
+    )
+    submissions = (
+        db.query(Submission)
+        .filter(Submission.candidate_id == candidate_id)
+        .all()
+    )
+    submission_by_question = {s.question_id: s for s in submissions}
+    items_payload = []
+    for q in questions:
+        s = submission_by_question.get(q.id)
+        items_payload.append(
+            {
+                "question_id": q.id,
+                "qtype": q.qtype,
+                "title": q.title,
+                "prompt": q.prompt,
+                "answer": (s.answer_text if s else ""),
+            }
+        )
+
+    user_content = (
+        "Grade the following answers. Return JSON only."
+        + json.dumps({"items": items_payload}, ensure_ascii=False)
+    )
+    raw = _call_openai_responses(
+        [
+            {"role": "system", "content": OPENAI_GRADING_SYSTEM},
+            {"role": "user", "content": user_content},
+        ]
+    )
+
+    parsed = _extract_json_block(raw)
+    if not parsed or "items" not in parsed:
+        preview = raw[:800] if isinstance(raw, str) else ""
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenAI returned invalid grading JSON. Raw: {preview}",
+        )
+
+    valid_ids = {q.id for q in questions}
+    out_items = []
+    for item in parsed.get("items", []):
+        try:
+            qid = int(item.get("question_id"))
+        except Exception:
+            continue
+        if qid not in valid_ids:
+            continue
+        score = item.get("score")
+        if score is not None:
+            try:
+                score = int(score)
+                score = max(0, min(10, score))
+            except Exception:
+                score = None
+        feedback = item.get("feedback") if isinstance(item.get("feedback"), str) else None
+        out_items.append({"question_id": qid, "score": score, "feedback": feedback})
+
+    return {"model": settings.openai_model, "items": out_items}

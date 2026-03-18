@@ -162,3 +162,20 @@ class SQLExecuteOut(BaseModel):
     columns: List[str]
     rows: List[List[object]]
     row_count: int
+
+
+
+
+
+class AIAutoGradeIn(BaseModel):
+    answers: List[CandidateAnswerIn]
+
+class AIAutoGradeItem(BaseModel):
+    question_id: int
+    score: Optional[int] = None
+    feedback: Optional[str] = None
+
+class AIAutoGradeOut(BaseModel):
+    model: str
+    items: List[AIAutoGradeItem]
+

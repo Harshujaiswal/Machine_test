@@ -15,7 +15,7 @@ router = APIRouter(prefix="/candidate", tags=["Candidate"])
 GEMINI_KEY_SETTING = "gemini_api_key"
 
 
-REVIEWER_EMAIL_TO_NAME = {
+REVIEWER_EMAIL_TO_NAME = {    "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
     "harshjaiswal.linuxbean@gmail.com": "HARSH JAISWAL",
     "rahulparihar.stevesai@gmail.com": "RAHUL",
 }
@@ -156,11 +156,11 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
         to_email=candidate.email,
         subject="Submission Received - Machine Test",
         body=(
-            f"Hi {candidate.name},\n\n"
-            "Your machine test submission has been received successfully.\n\n"
-            f"Submission type: {reason_text}\n"
-            f"Submitted at: {submitted_at_str}\n\n"
-            "Our team will review your responses and get back to you.\n"
+            f"Hi {candidate.name},"
+            "Your machine test submission has been received successfully."
+            f"Submission type: {reason_text}"
+            f"Submitted at: {submitted_at_str}"
+            "Our team will review your responses and get back to you."
             "Thank you for your time."
         ),
         html_body=(
@@ -192,11 +192,11 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
             to_email=reviewer_email,
             subject=f"Candidate Submitted Test - {candidate.name}",
             body=(
-                f"Hi {reviewer_name},\n\n"
-                f"Candidate {candidate.name} ({candidate.email}) has submitted the machine test.\n"
-                f"Test level: {candidate.test_level}\n"
-                f"Submission type: {reason_text}\n"
-                f"Submitted at: {submitted_at_str}\n\n"
+                f"Hi {reviewer_name},"
+                f"Candidate {candidate.name} ({candidate.email}) has submitted the machine test."
+                f"Test level: {candidate.test_level}"
+                f"Submission type: {reason_text}"
+                f"Submitted at: {submitted_at_str}"
                 f"Please review on admin dashboard: {settings.frontend_base_url}/admin/dashboard"
             ),
             html_body=(

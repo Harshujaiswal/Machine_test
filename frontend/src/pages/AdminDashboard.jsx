@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api, setAuthToken } from "../api";
 
 const REVIEWER_OPTIONS = [
-  { name: "HARSH JAISWAL", email: "harshjaiswal.linuxban@gmail.com" },
+  { name: "HARSH JAISWAL", email: "harshjaiswal.linuxbean@gmail.com" },
   { name: "RAHUL", email: "rahulparihar.stevesai@gmail.com" },
 ];
 

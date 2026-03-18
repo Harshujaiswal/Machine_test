@@ -59,6 +59,19 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DEFAULT_ADMINS", "default_admins"),
     )
 
+    openai_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("OPENAI_MODEL", "openai_model"),
+    )
+    openai_timeout_seconds: int = Field(
+        default=30,
+        validation_alias=AliasChoices("OPENAI_TIMEOUT_SECONDS", "openai_timeout_seconds"),
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

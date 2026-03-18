@@ -30,6 +30,11 @@ export default function AdminCandidateDetail() {
   const [marksInputs, setMarksInputs] = useState({});
   const [savingMarks, setSavingMarks] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
+  const [aiFeedbacks, setAiFeedbacks] = useState({});
+  const [showAiConfirm, setShowAiConfirm] = useState(false);
+  const [aiConfirmText, setAiConfirmText] = useState("");
 
   useEffect(() => {
     async function loadDetail() {
@@ -82,6 +87,28 @@ export default function AdminCandidateDetail() {
     return sum + n;
   }, 0);
 
+  function openAiConfirmModal() {
+    setError("");
+    setAiConfirmText("");
+    setShowAiConfirm(true);
+  }
+
+  function closeAiConfirmModal() {
+    if (aiLoading) return;
+    setShowAiConfirm(false);
+    setAiConfirmText("");
+  }
+
+  async function confirmAiAccess() {
+    if (aiConfirmText !== "HARSH") {
+      setError("Type Password in capital letters to use AI Check & Suggest Marks.");
+      return;
+    }
+    setShowAiConfirm(false);
+    setAiConfirmText("");
+    await runAiGrading();
+  }
+
   async function saveMachineTestMarks() {
     if (!data) return;
     setSavingMarks(true);
@@ -126,6 +153,34 @@ export default function AdminCandidateDetail() {
     }
   }
 
+
+  async function runAiGrading() {
+    if (!data) return;
+    setAiLoading(true);
+    setAiMessage("");
+    setError("");
+    try {
+      const payload = {        answers: data.questions.map((q) => ({          question_id: q.question_id,          answer_text: runInputs[q.question_id] || "",        })),      };      const { data: res } = await api.post(`/admin/submissions/${candidateId}/ai-grade`, payload);
+      const nextMarks = { ...marksInputs };
+      const nextFeedbacks = {};
+      (res.items || []).forEach((item) => {
+        if (item.score !== null && item.score !== undefined) {
+          nextMarks[item.question_id] = String(item.score);
+        }
+        if (item.feedback) {
+          nextFeedbacks[item.question_id] = item.feedback;
+        }
+      });
+      setMarksInputs(nextMarks);
+      setAiFeedbacks(nextFeedbacks);
+      setAiMessage("AI suggestions applied. You can edit marks before saving.");
+    } catch (err) {
+      setError(err?.response?.data?.detail || "AI grading failed");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   async function runSQL(questionId) {
     const query = runInputs[questionId] || "";
     setExecution((prev) => ({ ...prev, [questionId]: { loading: true, mode: "sql" } }));
@@ -163,30 +218,45 @@ export default function AdminCandidateDetail() {
         {data && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-white p-5 shadow">
-              <h1 className="text-2xl font-bold text-slate-900">{data.candidate_name}</h1>
-              <p className="text-sm text-slate-600">{data.candidate_email}</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Level: {data.test_level} | Interview Marks:{" "}
-                {data.interview_marks === null ? "-" : data.interview_marks}
-              </p>
-              <p className="text-sm text-slate-600">Interviewer: {data.interviewer_name || "-"}</p>
-              <p className="text-sm text-slate-600">
-                Reviewers: {data.reviewer_names?.length ? data.reviewer_names.join(", ") : "-"}
-              </p>
-              <p className="text-sm text-slate-600">Timer: {data.test_duration_minutes} minutes</p>
-              <p className="text-sm text-slate-600">
-                Machine Test Marks: {data.machine_test_marks ?? totalMachineTestMarks}
-              </p>
-              <p className="text-sm text-slate-600">
-                Submit Type: {submissionReasonText(data.submission_reason)}
-              </p>
-              <span
-                className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-                  data.is_submitted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {data.is_submitted ? "Submitted" : "Pending"}
-              </span>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">{data.candidate_name}</h1>
+                  <p className="text-sm text-slate-600">{data.candidate_email}</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Level: {data.test_level} | Interview Marks:{" "}
+                    {data.interview_marks === null ? "-" : data.interview_marks}
+                  </p>
+                  <p className="text-sm text-slate-600">Interviewer: {data.interviewer_name || "-"}</p>
+                  <p className="text-sm text-slate-600">
+                    Reviewers: {data.reviewer_names?.length ? data.reviewer_names.join(", ") : "-"}
+                  </p>
+                  <p className="text-sm text-slate-600">Timer: {data.test_duration_minutes} minutes</p>
+                  <p className="text-sm text-slate-600">
+                    Machine Test Marks: {data.machine_test_marks ?? totalMachineTestMarks}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Submit Type: {submissionReasonText(data.submission_reason)}
+                  </p>
+                  <span
+                    className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                      data.is_submitted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {data.is_submitted ? "Submitted" : "Pending"}
+                  </span>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={openAiConfirmModal}
+                    disabled={aiLoading}
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950 disabled:opacity-60"
+                  >
+                    {aiLoading ? "Checking with AI..." : "AI Check & Suggest Marks"}
+                  </button>
+                  {aiMessage && <p className="mt-2 text-xs text-emerald-700">{aiMessage}</p>}
+                </div>
+              </div>
             </div>
 
             {data.questions.map((q) => (
@@ -209,6 +279,13 @@ export default function AdminCandidateDetail() {
                     className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-brand-500"
                   />
                 </div>
+                {aiFeedbacks[q.question_id] && (
+                  <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                    <p className="font-semibold">AI Feedback</p>
+                    <p className="mt-1 whitespace-pre-wrap">{aiFeedbacks[q.question_id]}</p>
+                  </div>
+                )}
+
 
                 <div className="mt-4 rounded-lg border border-slate-200 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -289,24 +366,19 @@ export default function AdminCandidateDetail() {
                                   ))}
                                 </tbody>
                               </table>
-                            </div>
-                          ) : (
+                            </div>) : (
                             <p className="mt-1">(no rows)</p>
                           )}
                         </>
                       )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                    </div>)}
+                </div></div>))}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">Total Machine Test Marks</p>
                   <p className="text-3xl font-bold text-slate-900">{totalMachineTestMarks}</p>
-                </div>
-                <button
+                </div><button
                   type="button"
                   onClick={saveMachineTestMarks}
                   disabled={savingMarks}
@@ -314,8 +386,49 @@ export default function AdminCandidateDetail() {
                 >
                   {savingMarks ? "Saving..." : "Submit Marks"}
                 </button>
+              </div>{saveMessage && <p className="mt-2 text-sm text-emerald-700">{saveMessage}</p>}
+            </div></div>
+        )}
+
+        {showAiConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">AI Access Check</p>
+              <h3 className="mt-2 text-xl font-bold text-slate-900">Type Password to continue</h3>
+              {/* <p className="mt-2 text-sm text-slate-600">
+                AI Check & Suggest Marks tabhi chalega jab aap exact <span className="font-semibold text-slate-900">HARSH</span> capital letters me enter karoge.
+              </p> */}
+              <input
+                type="text"
+                value={aiConfirmText}
+                onChange={(e) => setAiConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmAiAccess();
+                  }
+                }}
+                placeholder="Type Password"
+                className="mt-4 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-900 outline-none focus:border-brand-500"
+                autoFocus
+              />
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeAiConfirmModal}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAiAccess}
+                  disabled={aiLoading}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950 disabled:opacity-60"
+                >
+                  Continue
+                </button>
               </div>
-              {saveMessage && <p className="mt-2 text-sm text-emerald-700">{saveMessage}</p>}
             </div>
           </div>
         )}
