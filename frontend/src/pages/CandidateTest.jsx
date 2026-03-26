@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Editor from "@monaco-editor/react";
+const Editor = lazy(() => import("@monaco-editor/react"));
 import { api } from "../api";
 
 const EMPLOYEE_COLUMNS = [
@@ -32,6 +32,7 @@ export default function CandidateTest() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [testStarted, setTestStarted] = useState(false);
+  const [startingTest, setStartingTest] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -309,49 +310,78 @@ export default function CandidateTest() {
   if (!session) return <div className="p-8 text-red-600">{error || "Unable to load test."}</div>;
   if (!testStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 p-6">
-        <div className="mx-auto mt-14 max-w-2xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">Start Secure Test</h1>
-          <p className="mt-2 text-sm text-slate-700">
-            Candidate: {session.candidate_name} ({session.candidate_email})
-          </p>
-          <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-600">
-            <li>Test runs in fullscreen mode.</li>
-            <li>Leaving fullscreen/tab focus gives warning.</li>
-            <li>Timer: {session.test_duration_minutes} minutes</li>
-            <li>After {MAX_WARNINGS} violations, test auto-submits.</li>
-          </ul>
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-          <button
-            onClick={handleStartTest}
-            className="mt-6 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
-          >
-            Enter Fullscreen & Start Test
-          </button>
+      <div className="min-h-screen bg-[linear-gradient(135deg,#edf4fb_0%,#f6f9fd_48%,#e5eef8_100%)] p-6">
+        <div className="mx-auto mt-12 max-w-4xl overflow-hidden rounded-[2.2rem] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative overflow-hidden bg-[linear-gradient(135deg,#17233b_0%,#203863_50%,#294f88_100%)] px-8 py-10 text-white md:px-10 md:py-12">
+              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+              <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/80 backdrop-blur">
+                Machine Test
+              </p>
+              <h1 className="mt-8 text-5xl font-black tracking-[-0.06em] md:text-6xl">
+                Start
+                <span className="block text-cyan-100">Secure Test</span>
+              </h1>
+              <p className="mt-5 max-w-md text-sm leading-7 text-slate-200/85 md:text-base">
+                Candidate: {session.candidate_name} ({session.candidate_email})
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2 text-xs font-semibold text-slate-100/90">
+                <span className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/10">Fullscreen required</span>
+                <span className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/10">Warnings: {MAX_WARNINGS}</span>
+                <span className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/10">Timer: {session.test_duration_minutes} min</span>
+              </div>
+            </div>
+
+            <div className="px-7 py-8 md:px-10 md:py-10">
+              <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-6 shadow-[0_16px_44px_rgba(15,23,42,0.06)] md:p-8">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Before you begin</p>
+                <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
+                  <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Test runs in fullscreen mode.</li>
+                  <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Leaving fullscreen or switching tabs gives warnings.</li>
+                  <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Time left: {session.test_duration_minutes} minutes.</li>
+                  <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />After {MAX_WARNINGS} violations, test auto-submits.</li>
+                </ul>
+                {error && <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+                <button
+                  onClick={handleStartTest}
+                  className="mt-6 inline-flex w-full items-center justify-center rounded-[1.2rem] bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_48%,#06b6d4_100%)] px-5 py-3.5 text-sm font-bold text-white shadow-[0_18px_35px_rgba(37,99,235,0.22)] transition hover:brightness-110"
+                >
+                  Enter Fullscreen & Start Test
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 p-4 pb-28 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-5">
-        <div className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">Machine Test</h1>
-              <p className="mt-1 text-sm text-slate-600">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef5ff_0%,#f8fbff_36%,#e8eff8_100%)] p-4 pb-28 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-7">
+        <div className="overflow-hidden rounded-[2.25rem] border border-white/80 bg-white/95 p-7 shadow-[0_26px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-brand-700">Secure Machine Test</p>
+              <h1 className="mt-3 text-4xl font-black tracking-[-0.08em] text-slate-950 md:text-5xl">
+                Machine Test
+              </h1>
+              <p className="mt-3 text-sm text-slate-600">
                 {session.candidate_name} ({session.candidate_email})
               </p>
-              <p className="text-sm text-slate-600">
-                Level: <span className="font-semibold capitalize text-slate-800">{session.test_level}</span>
-              </p>
-              <p className="text-sm text-amber-700">
-                Warnings: {warningCount}/{MAX_WARNINGS}
-              </p>
-              <p className="text-sm text-red-600">Time Left: {countdownText}</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-[13px] text-slate-600">
+                <span>
+                  Level: <span className="font-semibold capitalize text-slate-900">{session.test_level}</span>
+                </span>
+                <span className="text-slate-300">|</span>
+                <span className="font-medium text-slate-700">
+                  Warnings: {warningCount}/{MAX_WARNINGS}
+                </span>
+                <span className="text-slate-300">|</span>
+                <span className="font-medium text-rose-600">Time Left: {countdownText}</span>
+              </div>
             </div>
-            <div className="min-w-56 rounded-2xl bg-slate-900 p-4 text-white">
+            <div className="min-w-56 rounded-[1.75rem] bg-[linear-gradient(180deg,#0d1528_0%,#111d38_100%)] p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)] ring-1 ring-white/10 lg:sticky lg:top-4">
               <p className="text-xs uppercase tracking-wide text-slate-300">Time Left</p>
               <p className="mt-1 font-mono text-3xl font-bold text-rose-300">{countdownText}</p>
               <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Progress</p>
@@ -366,7 +396,7 @@ export default function CandidateTest() {
               </div>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-6 flex flex-wrap gap-2">
             {questionList.map((q) => {
               const filled = (answers[q.id] || "").trim().length > 0;
               return (
@@ -374,7 +404,7 @@ export default function CandidateTest() {
                   key={`jump-${q.id}`}
                   type="button"
                   onClick={() => jumpToQuestion(q.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
                     filled
                       ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -386,12 +416,9 @@ export default function CandidateTest() {
             })}
           </div>
         </div>
-
         {session.test_instructions && (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-              Instructions
-            </p>
+          <div className="rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fff8e7_0%,#fffdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Instructions</p>
             <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-amber-900">
               {session.test_instructions}
             </pre>
@@ -399,7 +426,7 @@ export default function CandidateTest() {
         )}
 
         {questionList.map((q) => (
-          <div id={`q-${q.id}`} key={q.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div id={`q-${q.id}`} key={q.id} className="overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-brand-700">Q{q.order_no}</p>
               <span
@@ -410,31 +437,29 @@ export default function CandidateTest() {
                 {q.qtype.toUpperCase()}
               </span>
             </div>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              {cleanQuestionTitle(q.title)}
-            </h2>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900">{cleanQuestionTitle(q.title)}</h2>
             <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-slate-700">{q.prompt}</pre>
 
             {q.qtype === "python" ? (
-              <div className="mt-3 space-y-3">
-                <div className="overflow-hidden rounded-xl border border-slate-300">
-                  <Editor
+              <div className="mt-5 space-y-5">
+                <div className="overflow-hidden rounded-[1.1rem] border border-slate-300 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                  <Suspense fallback={<div className="flex h-[220px] items-center justify-center bg-slate-950 text-sm text-slate-300">Loading editor...</div>}><Editor
                     height="220px"
                     defaultLanguage="python"
                     theme="vs-dark"
                     value={answers[q.id]}
                     onChange={(value) => setAnswer(q.id, value || "")}
                     options={{ minimap: { enabled: false }, fontSize: 14 }}
-                  />
+                  /></Suspense>
                 </div>
                 <button
                   onClick={() => runPython(q.id)}
-                  className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-900"
+                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   Run Python
                 </button>
                 {execution[q.id] && !execution[q.id].loading && (
-                  <div className="rounded-xl bg-slate-900 p-3 text-xs text-slate-100">
+                  <div className="rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
                     <p className="font-semibold">Output</p>
                     <pre className="mt-1 whitespace-pre-wrap">{execution[q.id].stdout || "(no stdout)"}</pre>
                     {execution[q.id].stderr && (
@@ -447,12 +472,10 @@ export default function CandidateTest() {
                 )}
               </div>
             ) : (
-              <div className="mt-3 space-y-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="mt-5 space-y-5">
+                <div className="rounded-[1.15rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                   <p className="text-xs font-semibold text-slate-700">Dataset: employees</p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    Columns: {sqlColumns.join(", ")}
-                  </p>
+                  <p className="mt-1 text-xs text-slate-600">Columns: {sqlColumns.join(", ")}</p>
                   <div className="mt-2 overflow-auto">
                     <table className="min-w-full text-left text-xs text-slate-700">
                       <thead>
@@ -487,17 +510,17 @@ export default function CandidateTest() {
                   rows={7}
                   value={answers[q.id]}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-3 font-mono text-sm"
+                  className="w-full rounded-[1rem] border border-slate-300 bg-white/90 p-4 font-mono text-sm shadow-[0_8px_24px_rgba(15,23,42,0.04)] outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-100"
                   placeholder="Write your SQL answer here..."
                 />
                 <button
                   onClick={() => runSQL(q.id)}
-                  className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-900"
+                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   Run SQL
                 </button>
                 {execution[q.id] && !execution[q.id].loading && execution[q.id].mode === "sql" && (
-                  <div className="rounded-xl bg-slate-900 p-3 text-xs text-slate-100">
+                  <div className="rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
                     {execution[q.id].stderr ? (
                       <>
                         <p className="font-semibold text-red-300">Errors</p>
@@ -522,7 +545,10 @@ export default function CandidateTest() {
                                 {execution[q.id].rows.map((row, idx) => (
                                   <tr key={`${q.id}-row-${idx}`}>
                                     {row.map((cell, cellIdx) => (
-                                      <td key={`${q.id}-cell-${idx}-${cellIdx}`} className="border-b border-slate-800 px-2 py-1">
+                                      <td
+                                        key={`${q.id}-cell-${idx}-${cellIdx}`}
+                                        className="border-b border-slate-800 px-2 py-1"
+                                      >
                                         {String(cell)}
                                       </td>
                                     ))}
@@ -532,7 +558,7 @@ export default function CandidateTest() {
                             </table>
                           </div>
                         ) : (
-                          <p className="mt-1">(no columns returned)</p>
+                          <p className="mt-1">(no rows)</p>
                         )}
                       </>
                     )}
@@ -543,49 +569,42 @@ export default function CandidateTest() {
           </div>
         ))}
 
-        {showSubmitConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-              <h3 className="text-lg font-semibold text-slate-900">Submit Test?</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Are you sure you want to submit your test? You will not be able to edit answers after submit.
-              </p>
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCancelSubmit}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
+        <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Submit Test</p>
+              <p className="mt-1 text-3xl font-bold text-slate-900">{answeredCount}/{questionList.length} answered</p>
+            </div>
+            <button
+              type="button"
+              onClick={confirmAndSubmit}
+              disabled={submitting}
+              className="rounded-full bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_45%,#06b6d4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60"
+            >
+              {submitting ? "Submitting..." : "Submit Test"}
+            </button>
+          </div>
+          {showSubmitConfirm && (
+            <div className="mt-4 rounded-[1.4rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+              <p className="text-sm font-semibold text-slate-900">Are you sure you want to submit your test?</p>
+              <div className="mt-4 flex gap-3">
                 <button
                   type="button"
                   onClick={handleConfirmSubmit}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950"
                 >
                   Yes, Submit
                 </button>
+                <button
+                  type="button"
+                  onClick={handleCancelSubmit}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
+                >
+                  No, Keep Editing
+                </button>
               </div>
             </div>
-          </div>
-        )}
-
-        <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
-            <p className="text-sm text-slate-700">
-              Answered: <span className="font-semibold">{answeredCount}</span> / {questionList.length}
-            </p>
-            <div className="flex items-center gap-3">
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <button
-                disabled={submitting}
-                onClick={confirmAndSubmit}
-                className="rounded-lg bg-brand-600 px-5 py-2 text-white hover:bg-brand-700 disabled:opacity-60"
-              >
-                {submitting ? "Submitting..." : "Submit Test"}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

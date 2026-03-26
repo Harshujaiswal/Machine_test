@@ -101,7 +101,7 @@ export default function AdminCandidateDetail() {
 
   async function confirmAiAccess() {
     if (aiConfirmText !== "HARSH") {
-      setError("Type Password in capital letters to use AI Check & Suggest Marks.");
+      setError("Type Password in capital letters to access this.");
       return;
     }
     setShowAiConfirm(false);
@@ -153,14 +153,19 @@ export default function AdminCandidateDetail() {
     }
   }
 
-
   async function runAiGrading() {
     if (!data) return;
     setAiLoading(true);
     setAiMessage("");
     setError("");
     try {
-      const payload = {        answers: data.questions.map((q) => ({          question_id: q.question_id,          answer_text: runInputs[q.question_id] || "",        })),      };      const { data: res } = await api.post(`/admin/submissions/${candidateId}/ai-grade`, payload);
+      const payload = {
+        answers: data.questions.map((q) => ({
+          question_id: q.question_id,
+          answer_text: runInputs[q.question_id] || "",
+        })),
+      };
+      const { data: res } = await api.post(`/admin/submissions/${candidateId}/ai-grade`, payload);
       const nextMarks = { ...marksInputs };
       const nextFeedbacks = {};
       (res.items || []).forEach((item) => {
@@ -203,201 +208,236 @@ export default function AdminCandidateDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6">
-      <div className="mx-auto max-w-5xl">
-        <button
-          onClick={() => navigate("/admin/dashboard")}
-          className="mb-4 rounded-lg bg-slate-800 px-4 py-2 text-white"
-        >
-          Back to Dashboard
-        </button>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#eff5fb_0%,#eaf2fa_46%,#f3f7fc_100%)] p-4 md:p-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="rounded-[1.3rem] bg-[linear-gradient(135deg,#1d2942_0%,#202f4d_100%)] px-5 py-3 text-sm font-bold text-white shadow-[0_18px_36px_rgba(15,23,42,0.16)] transition hover:brightness-110"
+          >
+            Back to Dashboard
+          </button>
+          {aiMessage && <p className="text-sm font-medium text-emerald-700">{aiMessage}</p>}
+        </div>
 
         {loading && <p className="text-slate-700">Loading candidate details...</p>}
-        {error && <p className="text-red-600">{error}</p>}
+        {error && <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
 
         {data && (
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-white p-5 shadow">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-900">{data.candidate_name}</h1>
-                  <p className="text-sm text-slate-600">{data.candidate_email}</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Level: {data.test_level} | Interview Marks:{" "}
-                    {data.interview_marks === null ? "-" : data.interview_marks}
-                  </p>
-                  <p className="text-sm text-slate-600">Interviewer: {data.interviewer_name || "-"}</p>
-                  <p className="text-sm text-slate-600">
-                    Reviewers: {data.reviewer_names?.length ? data.reviewer_names.join(", ") : "-"}
-                  </p>
-                  <p className="text-sm text-slate-600">Timer: {data.test_duration_minutes} minutes</p>
-                  <p className="text-sm text-slate-600">
-                    Machine Test Marks: {data.machine_test_marks ?? totalMachineTestMarks}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Submit Type: {submissionReasonText(data.submission_reason)}
-                  </p>
+          <div className="space-y-5">
+            <section className="overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#15233c_0%,#203864_55%,#24508d_100%)] shadow-[0_26px_70px_rgba(15,23,42,0.16)]">
+              <div className="relative px-6 py-7 md:px-8 md:py-8">
+                <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-wrap items-start justify-between gap-5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-100/70">Candidate Review</p>
+                    <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">{data.candidate_name}</h1>
+                    <p className="mt-2 text-sm text-slate-200/85">{data.candidate_email}</p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Level: {data.test_level}
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Interview Marks: {data.interview_marks === null ? "-" : data.interview_marks}
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Interviewer: {data.interviewer_name || "-"}
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Reviewers: {data.reviewer_names?.length ? data.reviewer_names.join(", ") : "-"}
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Timer: {data.test_duration_minutes} min
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/10">
+                        Submit Type: {submissionReasonText(data.submission_reason)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-[1.6rem] border border-white/12 bg-white/10 px-5 py-4 text-right backdrop-blur">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-200/70">Machine Test Marks</p>
+                      <p className="mt-2 text-4xl font-black tracking-[-0.05em] text-white">
+                        {data.machine_test_marks ?? totalMachineTestMarks}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-base font-black text-slate-900 shadow-lg">
+                        {(data.candidate_name || "H").slice(0, 1).toUpperCase()}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={openAiConfirmModal}
+                        disabled={aiLoading}
+                        title="AI Check & Suggest Marks"
+                        aria-label="AI Check & Suggest Marks"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-xs font-black tracking-wide text-slate-900 shadow-md transition hover:scale-105 disabled:opacity-60"
+                      >
+                        {aiLoading ? "..." : "HELP"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-2">
                   <span
-                    className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
                       data.is_submitted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                     }`}
                   >
                     {data.is_submitted ? "Submitted" : "Pending"}
                   </span>
                 </div>
-                <div>
-                  <button
-                    type="button"
-                    onClick={openAiConfirmModal}
-                    disabled={aiLoading}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950 disabled:opacity-60"
-                  >
-                    {aiLoading ? "Checking with AI..." : "AI Check & Suggest Marks"}
-                  </button>
-                  {aiMessage && <p className="mt-2 text-xs text-emerald-700">{aiMessage}</p>}
-                </div>
               </div>
-            </div>
+            </section>
 
             {data.questions.map((q) => (
-              <div key={q.question_id} className="rounded-2xl bg-white p-5 shadow">
-                <p className="text-xs font-semibold text-brand-700">
-                  Q{q.order_no} - {q.qtype.toUpperCase()}
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">{q.question_title}</h2>
-                <p className="mt-1 text-sm text-slate-600">{q.prompt}</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Marks
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={marksInputs[q.question_id] ?? ""}
-                    onChange={(e) => updateMark(q.question_id, e.target.value)}
-                    className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-brand-500"
-                  />
-                </div>
-                {aiFeedbacks[q.question_id] && (
-                  <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
-                    <p className="font-semibold">AI Feedback</p>
-                    <p className="mt-1 whitespace-pre-wrap">{aiFeedbacks[q.question_id]}</p>
+              <section
+                key={q.question_id}
+                className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.06)]"
+              >
+                <div className="border-b border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-6 py-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-700">
+                        Q{q.order_no} - {q.qtype.toUpperCase()}
+                      </p>
+                      <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-900">{q.question_title}</h2>
+                      <p className="mt-3 text-sm leading-7 text-slate-600">{q.prompt}</p>
+                    </div>
+                    <div className="rounded-[1.2rem] bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                      <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Marks
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={marksInputs[q.question_id] ?? ""}
+                        onChange={(e) => updateMark(q.question_id, e.target.value)}
+                        className="mt-2 w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500"
+                      />
+                    </div>
                   </div>
-                )}
-
-
-                <div className="mt-4 rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Answer + Compiler
-                  </p>
-                  {q.qtype === "sql" && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      SQL Dataset Columns:{" "}
-                      {(data.test_level === "fresher" ? FRESHER_EMPLOYEE_COLUMNS : EMPLOYEE_COLUMNS).join(", ")}
-                    </p>
+                  {aiFeedbacks[q.question_id] && (
+                    <div className="mt-4 rounded-[1.2rem] border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">AI Feedback</p>
+                      <p className="mt-2 whitespace-pre-wrap leading-6">{aiFeedbacks[q.question_id]}</p>
+                    </div>
                   )}
-                  <textarea
-                    rows={7}
-                    value={runInputs[q.question_id] || ""}
-                    onChange={(e) => updateRunInput(q.question_id, e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-slate-300 p-3 font-mono text-sm"
-                    placeholder={
-                      q.qtype === "python"
-                        ? "Candidate answer (editable)."
-                        : "Candidate SQL answer (editable)."
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      q.qtype === "python" ? runPython(q.question_id) : runSQL(q.question_id)
-                    }
-                    className="mt-2 rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-900"
-                  >
-                    {execution[q.question_id]?.loading
-                      ? "Running..."
-                      : q.qtype === "python"
-                        ? "Run Python"
-                        : "Run SQL"}
-                  </button>
+                </div>
 
-                  {execution[q.question_id] && !execution[q.question_id].loading && (
-                    <div className="mt-3 rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-                      {execution[q.question_id].stderr ? (
-                        <>
-                          <p className="font-semibold text-red-300">Errors</p>
-                          <pre className="mt-1 whitespace-pre-wrap">{execution[q.question_id].stderr}</pre>
-                        </>
-                      ) : execution[q.question_id].mode === "python" ? (
-                        <>
-                          <p className="font-semibold">Output</p>
-                          <pre className="mt-1 whitespace-pre-wrap">
-                            {execution[q.question_id].stdout || "(no stdout)"}
-                          </pre>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-semibold">Rows: {execution[q.question_id].row_count}</p>
-                          {execution[q.question_id].columns?.length > 0 ? (
-                            <div className="mt-2 overflow-auto">
-                              <table className="min-w-full text-left text-xs">
-                                <thead>
-                                  <tr>
-                                    {execution[q.question_id].columns.map((c) => (
-                                      <th key={`${q.question_id}-${c}`} className="border-b border-slate-700 px-2 py-1">
-                                        {c}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {execution[q.question_id].rows.map((row, idx) => (
-                                    <tr key={`${q.question_id}-row-${idx}`}>
-                                      {row.map((cell, cellIdx) => (
-                                        <td
-                                          key={`${q.question_id}-cell-${idx}-${cellIdx}`}
-                                          className="border-b border-slate-800 px-2 py-1"
-                                        >
-                                          {String(cell)}
-                                        </td>
+                <div className="p-6">
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Answer + Compiler</p>
+                      {q.qtype === "sql" && (
+                        <p className="text-xs text-slate-500">
+                          SQL Dataset Columns: {(data.test_level === "fresher" ? FRESHER_EMPLOYEE_COLUMNS : EMPLOYEE_COLUMNS).join(", ")}
+                        </p>
+                      )}
+                    </div>
+                    <textarea
+                      rows={8}
+                      value={runInputs[q.question_id] || ""}
+                      onChange={(e) => updateRunInput(q.question_id, e.target.value)}
+                      className="mt-3 w-full rounded-[1.2rem] border border-slate-300 bg-white p-4 font-mono text-sm text-slate-900 outline-none focus:border-brand-500"
+                      placeholder={q.qtype === "python" ? "Candidate answer (editable)." : "Candidate SQL answer (editable)."}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => (q.qtype === "python" ? runPython(q.question_id) : runSQL(q.question_id))}
+                      className="mt-3 rounded-[1rem] bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_46%,#06b6d4_100%)] px-4 py-2.5 text-xs font-bold text-white shadow-[0_16px_30px_rgba(37,99,235,0.18)] hover:brightness-110"
+                    >
+                      {execution[q.question_id]?.loading
+                        ? "Running..."
+                        : q.qtype === "python"
+                          ? "Run Python"
+                          : "Run SQL"}
+                    </button>
+
+                    {execution[q.question_id] && !execution[q.question_id].loading && (
+                      <div className="mt-4 rounded-[1.2rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-inner">
+                        {execution[q.question_id].stderr ? (
+                          <>
+                            <p className="font-semibold text-red-300">Errors</p>
+                            <pre className="mt-2 whitespace-pre-wrap leading-6">{execution[q.question_id].stderr}</pre>
+                          </>
+                        ) : execution[q.question_id].mode === "python" ? (
+                          <>
+                            <p className="font-semibold text-cyan-200">Output</p>
+                            <pre className="mt-2 whitespace-pre-wrap leading-6">
+                              {execution[q.question_id].stdout || "(no stdout)"}
+                            </pre>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-cyan-200">Rows: {execution[q.question_id].row_count}</p>
+                            {execution[q.question_id].columns?.length > 0 ? (
+                              <div className="mt-3 overflow-auto">
+                                <table className="min-w-full text-left text-xs">
+                                  <thead>
+                                    <tr>
+                                      {execution[q.question_id].columns.map((c) => (
+                                        <th key={`${q.question_id}-${c}`} className="border-b border-slate-700 px-2 py-2">
+                                          {c}
+                                        </th>
                                       ))}
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>) : (
-                            <p className="mt-1">(no rows)</p>
-                          )}
-                        </>
-                      )}
-                    </div>)}
-                </div></div>))}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+                                  </thead>
+                                  <tbody>
+                                    {execution[q.question_id].rows.map((row, idx) => (
+                                      <tr key={`${q.question_id}-row-${idx}`}>
+                                        {row.map((cell, cellIdx) => (
+                                          <td
+                                            key={`${q.question_id}-cell-${idx}-${cellIdx}`}
+                                            className="border-b border-slate-800 px-2 py-2"
+                                          >
+                                            {String(cell)}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="mt-2">(no rows)</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            ))}
+
+            <section className="rounded-[1.9rem] border border-white/70 bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.06)]">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Total Machine Test Marks</p>
-                  <p className="text-3xl font-bold text-slate-900">{totalMachineTestMarks}</p>
-                </div><button
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Total Machine Test Marks</p>
+                  <p className="mt-2 text-5xl font-black tracking-[-0.06em] text-slate-900">{totalMachineTestMarks}</p>
+                </div>
+                <button
                   type="button"
                   onClick={saveMachineTestMarks}
                   disabled={savingMarks}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                  className="rounded-[1.2rem] bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_48%,#06b6d4_100%)] px-5 py-3 text-sm font-bold text-white shadow-[0_18px_35px_rgba(37,99,235,0.22)] hover:brightness-110 disabled:opacity-60"
                 >
                   {savingMarks ? "Saving..." : "Submit Marks"}
                 </button>
-              </div>{saveMessage && <p className="mt-2 text-sm text-emerald-700">{saveMessage}</p>}
-            </div></div>
+              </div>
+              {saveMessage && <p className="mt-3 text-sm font-medium text-emerald-700">{saveMessage}</p>}
+            </section>
+          </div>
         )}
 
         {showAiConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">AI Access Check</p>
-              <h3 className="mt-2 text-xl font-bold text-slate-900">Type Password to continue</h3>
-              {/* <p className="mt-2 text-sm text-slate-600">
-                AI Check & Suggest Marks tabhi chalega jab aap exact <span className="font-semibold text-slate-900">HARSH</span> capital letters me enter karoge.
-              </p> */}
+            <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
+              <h3 className="text-2xl font-black tracking-[-0.04em] text-slate-900">Type Password to continue</h3>
               <input
                 type="text"
                 value={aiConfirmText}
@@ -409,14 +449,14 @@ export default function AdminCandidateDetail() {
                   }
                 }}
                 placeholder="Type Password"
-                className="mt-4 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-900 outline-none focus:border-brand-500"
+                className="mt-4 w-full rounded-[1.2rem] border border-slate-300 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-900 outline-none focus:border-brand-500"
                 autoFocus
               />
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={closeAiConfirmModal}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  className="rounded-[1rem] border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
@@ -424,7 +464,7 @@ export default function AdminCandidateDetail() {
                   type="button"
                   onClick={confirmAiAccess}
                   disabled={aiLoading}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950 disabled:opacity-60"
+                  className="rounded-[1rem] bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-950 disabled:opacity-60"
                 >
                   Continue
                 </button>

@@ -413,6 +413,7 @@ def save_candidate_marks(
     return {"message": "Machine test marks saved successfully", "machine_test_marks": int(total_marks or 0)}
 
 @router.post("/submissions/{candidate_id}/ai-grade", response_model=AIAutoGradeOut)
+@router.post("/submissions/{candidate_id}/ai_grade", response_model=AIAutoGradeOut)
 def ai_grade_candidate(candidate_id: int, payload: AIAutoGradeIn | None = None, db: Session = Depends(get_db), _admin=Depends(get_current_admin)):
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
     if not candidate:
