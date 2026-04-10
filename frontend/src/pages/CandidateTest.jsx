@@ -129,7 +129,6 @@ export default function CandidateTest() {
   function cleanQuestionTitle(title) {
     return (title || "").replace(/^Q\d+\s*:\s*/i, "").trim();
   }
-
   useEffect(() => {
     warningCountRef.current = warningCount;
   }, [warningCount]);
@@ -304,7 +303,34 @@ export default function CandidateTest() {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [testStarted, submitting]);
+    }, [testStarted, submitting]);
+
+  useEffect(() => {
+    if (!testStarted) return;
+
+    const blockClipboard = (event) => {
+      event.preventDefault();
+    };
+
+    const blockCopyShortcuts = (event) => {
+      const key = (event.key || "").toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && ["c", "x"].includes(key)) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("copy", blockClipboard);
+    document.addEventListener("cut", blockClipboard);
+    document.addEventListener("contextmenu", blockClipboard);
+    document.addEventListener("keydown", blockCopyShortcuts);
+
+    return () => {
+      document.removeEventListener("copy", blockClipboard);
+      document.removeEventListener("cut", blockClipboard);
+      document.removeEventListener("contextmenu", blockClipboard);
+      document.removeEventListener("keydown", blockCopyShortcuts);
+    };
+  }, [testStarted]);
 
   if (loading) return <div className="p-8 text-slate-700">Loading test...</div>;
   if (!session) return <div className="p-8 text-red-600">{error || "Unable to load test."}</div>;
@@ -335,7 +361,7 @@ export default function CandidateTest() {
             <div className="px-7 py-8 md:px-10 md:py-10">
               <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-6 shadow-[0_16px_44px_rgba(15,23,42,0.06)] md:p-8">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Before you begin</p>
-                <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
+                <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700 select-none">
                   <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Test runs in fullscreen mode.</li>
                   <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Leaving fullscreen or switching tabs gives warnings.</li>
                   <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Time left: {session.test_duration_minutes} minutes.</li>
@@ -369,7 +395,7 @@ export default function CandidateTest() {
               <p className="mt-3 text-sm text-slate-600">
                 {session.candidate_name} ({session.candidate_email})
               </p>
-              <div className="mt-2 flex flex-wrap gap-2 text-[13px] text-slate-600">
+              <div className="mt-2 flex flex-wrap gap-2 text-[13px] text-slate-600 select-none">
                 <span>
                   Level: <span className="font-semibold capitalize text-slate-900">{session.test_level}</span>
                 </span>
@@ -419,7 +445,7 @@ export default function CandidateTest() {
         {session.test_instructions && (
           <div className="rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fff8e7_0%,#fffdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Instructions</p>
-            <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-amber-900">
+            <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-amber-900 select-none">
               {session.test_instructions}
             </pre>
           </div>
@@ -428,7 +454,7 @@ export default function CandidateTest() {
         {questionList.map((q) => (
           <div id={`q-${q.id}`} key={q.id} className="overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-brand-700">Q{q.order_no}</p>
+              <p className="text-sm font-semibold text-brand-700 select-none">Q{q.order_no}</p>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   q.qtype === "python" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
@@ -437,8 +463,8 @@ export default function CandidateTest() {
                 {q.qtype.toUpperCase()}
               </span>
             </div>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">{cleanQuestionTitle(q.title)}</h2>
-            <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-slate-700">{q.prompt}</pre>
+                        <h2 className="mt-2 text-xl font-semibold text-slate-900 select-none">{cleanQuestionTitle(q.title)}</h2>
+            <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-slate-700 select-none">{q.prompt}</pre>
 
             {q.qtype === "python" ? (
               <div className="mt-5 space-y-5">
@@ -474,14 +500,14 @@ export default function CandidateTest() {
             ) : (
               <div className="mt-5 space-y-5">
                 <div className="rounded-[1.15rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                  <p className="text-xs font-semibold text-slate-700">Dataset: employees</p>
-                  <p className="mt-1 text-xs text-slate-600">Columns: {sqlColumns.join(", ")}</p>
+                  <p className="text-xs font-semibold text-slate-700 select-none">Dataset: employees</p>
+                  <p className="mt-1 text-xs text-slate-600 select-none">Columns: {sqlColumns.join(", ")}</p>
                   <div className="mt-2 overflow-auto">
                     <table className="min-w-full text-left text-xs text-slate-700">
                       <thead>
                         <tr>
                           {sqlColumns.map((col) => (
-                            <th key={`${q.id}-${col}`} className="border-b border-slate-300 px-2 py-1">
+                            <th key={`${q.id}-${col}`} className="border-b border-slate-300 px-2 py-1 select-none">
                               {col}
                             </th>
                           ))}
@@ -495,7 +521,7 @@ export default function CandidateTest() {
                               .map((cell, cIdx) => (
                                 <td
                                   key={`${q.id}-sample-${idx}-${cIdx}`}
-                                  className="border-b border-slate-200 px-2 py-1"
+                                  className="border-b border-slate-200 px-2 py-1 select-none"
                                 >
                                   {String(cell)}
                                 </td>
