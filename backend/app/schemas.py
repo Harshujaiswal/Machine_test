@@ -179,3 +179,13 @@ class AIAutoGradeOut(BaseModel):
     model: str
     items: List[AIAutoGradeItem]
 
+
+class EmailJSRequest(BaseModel):
+    to_email: EmailStr
+    subject: str
+    message: str
+
+
+class EmailJSResponse(BaseModel):
+    success: bool
+    message: str

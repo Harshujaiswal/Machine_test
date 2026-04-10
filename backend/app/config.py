@@ -72,6 +72,35 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OPENAI_TIMEOUT_SECONDS", "openai_timeout_seconds"),
     )
 
+    emailjs_service_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_SERVICE_ID", "emailjs_service_id"),
+    )
+    emailjs_template_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_TEMPLATE_ID", "emailjs_template_id"),
+    )
+    emailjs_invite_template_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_INVITE_TEMPLATE_ID", "emailjs_invite_template_id"),
+    )
+    emailjs_submit_candidate_template_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_SUBMIT_CANDIDATE_TEMPLATE_ID", "emailjs_submit_candidate_template_id"),
+    )
+    emailjs_submit_reviewer_template_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_SUBMIT_REVIEWER_TEMPLATE_ID", "emailjs_submit_reviewer_template_id"),
+    )
+    emailjs_public_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_PUBLIC_KEY", "emailjs_public_key"),
+    )
+    emailjs_private_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("EMAILJS_PRIVATE_KEY", "emailjs_private_key"),
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

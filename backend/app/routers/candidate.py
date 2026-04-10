@@ -183,6 +183,12 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
             "</div>"
             "</div>"
         ),
+        template_id=settings.emailjs_submit_candidate_template_id,
+        extra_template_params={
+            "candidate_name": candidate.name,
+            "submission_type": reason_text,
+            "submitted_at": submitted_at_str,
+        },
     )
 
     reviewer_emails = _parse_reviewer_emails(candidate.reviewer_emails)
@@ -211,6 +217,16 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
                 "</div>"
                 "</div>"
             ),
+            template_id=settings.emailjs_submit_reviewer_template_id,
+            extra_template_params={
+                "reviewer_name": reviewer_name,
+                "candidate_name": candidate.name,
+                "candidate_email": candidate.email,
+                "test_level": candidate.test_level,
+                "submission_type": reason_text,
+                "submitted_at": submitted_at_str,
+                "admin_dashboard_link": f"{settings.frontend_base_url}/admin/dashboard",
+            },
         )
 
     return {"message": "Submission recorded successfully"}

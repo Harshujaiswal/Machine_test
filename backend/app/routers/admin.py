@@ -173,6 +173,16 @@ def invite_candidate(
             "</div>"
             "</div>"
         ),
+        template_id=settings.emailjs_invite_template_id,
+        extra_template_params={
+            "interviewer_name": candidate.name,
+            "test_level": test_level_label,
+            "test_duration_minutes": candidate.test_duration_minutes,
+            "link_expiry": expires_at_str,
+            "start_test_link": invite_link,
+            "direct_link": invite_link,
+            "invite_link": invite_link,
+        },
     )
 
     return {
