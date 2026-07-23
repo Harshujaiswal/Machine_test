@@ -40,7 +40,7 @@ export default function AdminDashboard() {
         setAuthToken(null);
         navigate("/admin/login");
       } else {
-        setError(detail || "Failed to load submissions");
+        setError(detail || "Unable to load dashboard data. Please refresh and try again.");
       }
     } finally {
       setLoading(false);
@@ -234,10 +234,10 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.08),transparent_24%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_48%,#eaf1f8_100%)] text-slate-900">
+      <div className="premium-dashboard min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.08),transparent_24%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_48%,#eaf1f8_100%)] text-slate-900">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.05),transparent_42%)]" />
         <div className="relative mx-auto max-w-[1500px] px-4 py-6 md:px-6 md:py-8">
-          <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/80 bg-white/92 px-5 py-4.5 shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur md:px-6">
+          <div className="dash-topbar flex items-center justify-between gap-4 rounded-[2rem] border border-white/80 bg-white/[0.92] px-5 py-[18px] shadow-[0_18px_42px_rgba(15,23,42,0.05)] backdrop-blur md:px-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#67e8f9_0%,#60a5fa_48%,#3b82f6_100%)] text-xl font-black text-slate-950 shadow-[0_18px_40px_rgba(56,189,248,0.18)]">
                 H
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <section className="mt-6 overflow-hidden rounded-[2.4rem] border border-white/80 bg-white/94 shadow-[0_26px_70px_rgba(15,23,42,0.08)]">
+          <section className="dash-hero mt-6 overflow-hidden rounded-[2.4rem] border border-white/80 bg-white/[0.94] shadow-[0_26px_70px_rgba(15,23,42,0.08)]">
             <div className="relative px-6 py-10 md:px-8 md:py-12">
               <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-slate-900/5 blur-2xl" />
               <div className="absolute bottom-0 right-0 h-24 w-56 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.06))]" />
@@ -269,22 +269,22 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-[1.9rem] border border-slate-200 bg-white/94 px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+          <section className="dash-metrics mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-[1.9rem] border border-slate-200 bg-white/[0.94] px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Total Candidates</p>
               <div className="mt-4 flex items-end justify-between">
                 <p className="text-5xl font-black tracking-[-0.06em] text-slate-950">{totalCandidates}</p>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Live</span>
               </div>
             </div>
-            <div className="rounded-[1.9rem] border border-slate-200 bg-white/94 px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+            <div className="rounded-[1.9rem] border border-slate-200 bg-white/[0.94] px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-900">Submitted</p>
               <div className="mt-4 flex items-end justify-between">
                 <p className="text-5xl font-black tracking-[-0.06em] text-slate-900">{submittedCount}</p>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-slate-900">Ready</span>
               </div>
             </div>
-            <div className="rounded-[1.9rem] border border-slate-200 bg-white/94 px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+            <div className="rounded-[1.9rem] border border-slate-200 bg-white/[0.94] px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-900">Pending</p>
               <div className="mt-4 flex items-end justify-between">
                 <p className="text-5xl font-black tracking-[-0.06em] text-slate-900">{pendingCount}</p>
@@ -293,9 +293,9 @@ export default function AdminDashboard() {
             </div>
           </section>
 
-          <section className="mt-6 grid gap-6 xl:grid-cols-[430px_minmax(0,1fr)]">
+          <section className="dash-workspace mt-6 grid gap-6 xl:grid-cols-[430px_minmax(0,1fr)]">
             <div className="space-y-6 xl:sticky xl:top-6 xl:h-fit">
-              <div className="rounded-[2rem] border border-slate-200 bg-white/94 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+              <div className="rounded-[2rem] border border-slate-200 bg-white/[0.94] p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
                 <div className="mb-6">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Create Invite</p>
                   <h2 className="mt-2 text-[30px] font-black tracking-[-0.05em] text-slate-950">Invite Candidate</h2>
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
                 </form>
 
                 {inviteResult && (
-                  <div className="mt-5 rounded-[1.4rem] border border-slate-200 bg-white/96 p-4 text-sm text-emerald-900 shadow-[0_10px_26px_rgba(16,185,129,0.05)]">
+                  <div className="mt-5 rounded-[1.4rem] border border-slate-200 bg-white/[0.96] p-4 text-sm text-emerald-900 shadow-[0_10px_26px_rgba(16,185,129,0.05)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900">Invite Link Generated</p>
                     <p className="mt-2 break-all text-xs leading-6">{inviteResult}</p>
                     <button
@@ -424,7 +424,7 @@ export default function AdminDashboard() {
                 {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
               </div>
 
-              <div className="rounded-[2rem] border border-slate-200 bg-white/94 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+              <div className="rounded-[2rem] border border-slate-200 bg-white/[0.94] p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">AI Settings</p>
                   <h3 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">Gemini API Key</h3>
@@ -450,7 +450,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-slate-200 bg-white/94 p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
+            <div className="rounded-[2rem] border border-slate-200 bg-white/[0.94] p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Review Queue</p>
@@ -474,7 +474,7 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={item.candidate_id}
-                        className="rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_14px_30px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_40px_rgba(15,23,42,0.06)]"
+                        className="candidate-card rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_14px_30px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_40px_rgba(15,23,42,0.06)]"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">

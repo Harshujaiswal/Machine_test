@@ -21,6 +21,7 @@ const EMPLOYEE_ROWS = [
   [5, "Charlie", 3, 70000, 35, "2021-09-25"],
 ];
 const MAX_WARNINGS = 3;
+const DRAFT_SAVE_DELAY_MS = 5000;
 
 export default function CandidateTest() {
   const { token } = useParams();
@@ -42,6 +43,7 @@ export default function CandidateTest() {
   const answersRef = useRef({});
   const questionListRef = useRef([]);
   const autoSubmitTriggeredRef = useRef(false);
+  const draftSaveTimerRef = useRef(null);
 
   useEffect(() => {
     async function loadSession() {
@@ -53,11 +55,26 @@ export default function CandidateTest() {
       try {
         const { data } = await api.get(`/candidate/token/${token}`);
         setSession(data);
+        const draftKey = `candidate-draft-${token}`;
+        const localDraftRaw = window.localStorage.getItem(draftKey);
+        let localDraft = {};
+        if (localDraftRaw) {
+          try {
+            localDraft = JSON.parse(localDraftRaw) || {};
+          } catch {
+            localDraft = {};
+          }
+        }
+
+        const serverDraft = data.saved_answers || {};
+        const merged = { ...serverDraft, ...localDraft };
         const initial = {};
         data.questions.forEach((q) => {
-          initial[q.id] = "";
+          initial[q.id] = merged[q.id] || "";
         });
         setAnswers(initial);
+        answersRef.current = initial;
+        questionListRef.current = data.questions || [];
         setRemainingSeconds(Math.max(0, Number(data.time_left_seconds || 0)));
       } catch (err) {
         const detail = err?.response?.data?.detail || "Unable to load test";
@@ -97,6 +114,11 @@ export default function CandidateTest() {
   }, [questionList]);
 
   useEffect(() => {
+    if (!token) return;
+    window.localStorage.setItem(`candidate-draft-${token}`, JSON.stringify(answers));
+  }, [answers, token]);
+
+  useEffect(() => {
     if (!testStarted) return;
     const timer = setInterval(() => {
       setRemainingSeconds((prev) => {
@@ -116,8 +138,35 @@ export default function CandidateTest() {
   }, [testStarted]);
 
   function setAnswer(questionId, value) {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: value };
+      answersRef.current = next;
+      return next;
+    });
   }
+
+  useEffect(() => {
+    if (!testStarted || loading || submitting) return;
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current);
+    }
+    draftSaveTimerRef.current = setTimeout(() => {
+      const draftPayload = {
+        answers: questionListRef.current.map((q) => ({
+          question_id: q.id,
+          answer_text: answersRef.current[q.id] || "",
+        })),
+      };
+      api.post(`/candidate/draft/${token}`, draftPayload).catch(() => {});
+    }, DRAFT_SAVE_DELAY_MS);
+
+    return () => {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+        draftSaveTimerRef.current = null;
+      }
+    };
+  }, [answers, testStarted, loading, submitting, token]);
 
   function jumpToQuestion(questionId) {
     const el = document.getElementById(`q-${questionId}`);
@@ -258,8 +307,8 @@ export default function CandidateTest() {
     setShowSubmitConfirm(false);
     setError("");
     try {
-      const sourceAnswers = isAutoSubmit ? answersRef.current : answers;
-      const sourceQuestions = isAutoSubmit ? questionListRef.current : questionList;
+      const sourceAnswers = { ...(answersRef.current || {}) };
+      const sourceQuestions = questionListRef.current.length ? questionListRef.current : questionList;
       const payload = {
         answers: sourceQuestions.map((q) => ({
           question_id: q.id,
@@ -268,6 +317,7 @@ export default function CandidateTest() {
         auto_submit_reason: reason,
       };
       await api.post(`/candidate/submit/${token}`, payload);
+      window.localStorage.removeItem(`candidate-draft-${token}`);
       navigate("/candidate/submitted", { replace: true });
     } catch (err) {
       const detail = err?.response?.data?.detail || "Submission failed";
@@ -332,14 +382,14 @@ export default function CandidateTest() {
     };
   }, [testStarted]);
 
-  if (loading) return <div className="p-8 text-slate-700">Loading test...</div>;
+  if (loading) return <div className="premium-state"><div className="premium-state-card"><span className="premium-spinner" /><p>Preparing your secure test...</p></div></div>;
   if (!session) return <div className="p-8 text-red-600">{error || "Unable to load test."}</div>;
   if (!testStarted) {
     return (
-      <div className="min-h-screen bg-[linear-gradient(135deg,#edf4fb_0%,#f6f9fd_48%,#e5eef8_100%)] p-6">
-        <div className="mx-auto mt-12 max-w-4xl overflow-hidden rounded-[2.2rem] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+      <div className="premium-start min-h-screen bg-[linear-gradient(135deg,#edf4fb_0%,#f6f9fd_48%,#e5eef8_100%)] p-6">
+        <div className="start-card mx-auto mt-12 max-w-4xl overflow-hidden rounded-[2.2rem] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
           <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="relative overflow-hidden bg-[linear-gradient(135deg,#17233b_0%,#203863_50%,#294f88_100%)] px-8 py-10 text-white md:px-10 md:py-12">
+            <div className="start-hero relative overflow-hidden bg-[linear-gradient(135deg,#17233b_0%,#203863_50%,#294f88_100%)] px-8 py-10 text-white md:px-10 md:py-12">
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/80 backdrop-blur">
                 Machine Test
@@ -359,7 +409,7 @@ export default function CandidateTest() {
             </div>
 
             <div className="px-7 py-8 md:px-10 md:py-10">
-              <div className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-6 shadow-[0_16px_44px_rgba(15,23,42,0.06)] md:p-8">
+              <div className="start-rules rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-6 shadow-[0_16px_44px_rgba(15,23,42,0.06)] md:p-8">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Before you begin</p>
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700 select-none">
                   <li className="flex gap-3"><span className="mt-2 h-2 w-2 rounded-full bg-brand-600" />Test runs in fullscreen mode.</li>
@@ -383,9 +433,9 @@ export default function CandidateTest() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef5ff_0%,#f8fbff_36%,#e8eff8_100%)] p-4 pb-28 md:p-8">
+    <div className="premium-test min-h-screen bg-[radial-gradient(circle_at_top,#eef5ff_0%,#f8fbff_36%,#e8eff8_100%)] p-4 pb-28 md:p-8">
       <div className="mx-auto max-w-7xl space-y-7">
-        <div className="overflow-hidden rounded-[2.25rem] border border-white/80 bg-white/95 p-7 shadow-[0_26px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="test-header overflow-hidden rounded-[2.25rem] border border-white/80 bg-white/95 p-7 shadow-[0_26px_80px_rgba(15,23,42,0.08)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-brand-700">Secure Machine Test</p>
@@ -407,7 +457,7 @@ export default function CandidateTest() {
                 <span className="font-medium text-rose-600">Time Left: {countdownText}</span>
               </div>
             </div>
-            <div className="min-w-56 rounded-[1.75rem] bg-[linear-gradient(180deg,#0d1528_0%,#111d38_100%)] p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)] ring-1 ring-white/10 lg:sticky lg:top-4">
+            <div className="test-timer min-w-56 rounded-[1.75rem] bg-[linear-gradient(180deg,#0d1528_0%,#111d38_100%)] p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)] ring-1 ring-white/10 lg:sticky lg:top-4">
               <p className="text-xs uppercase tracking-wide text-slate-300">Time Left</p>
               <p className="mt-1 font-mono text-3xl font-bold text-rose-300">{countdownText}</p>
               <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Progress</p>
@@ -452,7 +502,7 @@ export default function CandidateTest() {
         )}
 
         {questionList.map((q) => (
-          <div id={`q-${q.id}`} key={q.id} className="overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+          <div id={`q-${q.id}`} key={q.id} className="test-question overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-brand-700 select-none">Q{q.order_no}</p>
               <span
@@ -595,7 +645,7 @@ export default function CandidateTest() {
           </div>
         ))}
 
-        <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <div className="test-submit rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Submit Test</p>

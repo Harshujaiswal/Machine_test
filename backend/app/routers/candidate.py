@@ -8,7 +8,7 @@ from ..deps import get_db
 from ..email_utils import send_email
 from ..models import AppSetting, Candidate, Question, Submission
 from ..seed import HIGH_TEST_INSTRUCTIONS
-from ..schemas import CandidateSessionOut, CandidateSubmitIn, CandidateSubmitOut
+from ..schemas import CandidateDraftIn, CandidateDraftOut, CandidateSessionOut, CandidateSubmitIn, CandidateSubmitOut
 
 
 router = APIRouter(prefix="/candidate", tags=["Candidate"])
@@ -78,6 +78,14 @@ def get_candidate_session(token: str, db: Session = Depends(get_db)):
             }
         )
 
+    saved_answers = {
+        sub.question_id: sub.answer_text
+        for sub in db.query(Submission)
+        .filter(Submission.candidate_id == candidate.id)
+        .all()
+        if (sub.answer_text or "").strip()
+    }
+
     return {
         "candidate_name": candidate.name,
         "candidate_email": candidate.email,
@@ -88,8 +96,54 @@ def get_candidate_session(token: str, db: Session = Depends(get_db)):
         "time_left_seconds": time_left_seconds,
         "test_instructions": HIGH_TEST_INSTRUCTIONS if candidate.test_level == "high" else None,
         "questions": question_payload,
+        "saved_answers": saved_answers,
     }
 
+
+
+
+@router.post("/draft/{token}", response_model=CandidateDraftOut)
+def save_draft(token: str, payload: CandidateDraftIn, db: Session = Depends(get_db)):
+    candidate = _get_candidate_by_token(db, token, require_not_submitted=True)
+    if not candidate.test_started_at:
+        candidate.test_started_at = datetime.utcnow()
+        db.commit()
+        db.refresh(candidate)
+
+    question_ids = {
+        q.id for q in db.query(Question.id).filter(Question.level == candidate.test_level).all()
+    }
+
+    for ans in payload.answers:
+        if ans.question_id not in question_ids:
+            continue
+        normalized_answer = (ans.answer_text or "").strip()
+        existing = (
+            db.query(Submission)
+            .filter(
+                Submission.candidate_id == candidate.id,
+                Submission.question_id == ans.question_id,
+            )
+            .first()
+        )
+        if not normalized_answer:
+            if existing:
+                db.delete(existing)
+            continue
+
+        if existing:
+            existing.answer_text = normalized_answer
+        else:
+            db.add(
+                Submission(
+                    candidate_id=candidate.id,
+                    question_id=ans.question_id,
+                    answer_text=normalized_answer,
+                )
+            )
+
+    db.commit()
+    return {"message": "Draft saved successfully"}
 
 @router.post("/submit/{token}", response_model=CandidateSubmitOut)
 def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(get_db)):
@@ -100,10 +154,7 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
         db.refresh(candidate)
 
     test_ends_at = candidate.test_started_at + timedelta(minutes=candidate.test_duration_minutes)
-    if datetime.utcnow() >= test_ends_at:
-        candidate.is_submitted = True
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Test time is over")
+    timed_out = datetime.utcnow() >= test_ends_at
 
     question_ids = {
         q.id for q in db.query(Question.id).filter(Question.level == candidate.test_level).all()
@@ -140,7 +191,7 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
                 )
             )
 
-    candidate.submission_reason = payload.auto_submit_reason or "manual"
+    candidate.submission_reason = "timeout" if timed_out else (payload.auto_submit_reason or "manual")
     candidate.is_submitted = True
     candidate.submitted_at = datetime.utcnow()
     db.commit()

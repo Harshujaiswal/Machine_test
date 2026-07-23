@@ -9,3 +9,5 @@ backend/.env
 frontend/.env
 machine_test.db
 
+.history/
+.vercel/

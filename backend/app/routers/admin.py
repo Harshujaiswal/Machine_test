@@ -4,7 +4,7 @@ from uuid import uuid4
 from openai import OpenAI
 
 import json
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -42,6 +42,17 @@ EMAIL_TO_REVIEWER_NAME = {
     "rahulparihar.stevesai@gmail.com": "RAHUL",
 }
 
+
+
+def _resolve_frontend_base_url(request: Request | None = None) -> str:
+    configured = (settings.frontend_base_url or "").strip().rstrip("/")
+    if configured and not configured.startswith(("http://localhost", "http://127.0.0.1")):
+        return configured
+    if request is not None:
+        origin = (request.headers.get("origin") or "").strip().rstrip("/")
+        if origin:
+            return origin
+    return configured or "http://localhost:5173"
 
 def _normalize_reviewer_emails(reviewer_emails: list[str]) -> list[str]:
     normalized: list[str] = []
@@ -103,6 +114,7 @@ def update_gemini_key(
 @router.post("/invite", response_model=InviteCandidateResponse)
 def invite_candidate(
     payload: InviteCandidateRequest,
+    request: Request,
     db: Session = Depends(get_db),
     _admin=Depends(get_current_admin),
 ):
@@ -132,7 +144,8 @@ def invite_candidate(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Candidate with this email already exists. Use a different email or delete old entry first.",
         )
-    invite_link = f"{settings.frontend_base_url}/candidate/{token}"
+    frontend_base_url = _resolve_frontend_base_url(request)
+    invite_link = f"{frontend_base_url}/candidate/{token}"
     expires_at_str = expires_at.strftime("%d %b %Y, %I:%M %p UTC")
     test_level_label = (candidate.test_level or "").capitalize()
     send_email(

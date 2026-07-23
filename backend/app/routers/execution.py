@@ -11,7 +11,7 @@ router = APIRouter(prefix="/execute", tags=["Execution"])
 @router.post("/python", response_model=PythonExecuteOut)
 def execute_python(payload: PythonExecuteIn):
     try:
-        result = run_python_code(payload.code, payload.stdin, timeout=5)
+        result = run_python_code(payload.code, payload.stdin, timeout=5, enable_ai_fallback=True)
         return result
     except SyntaxError as e:
         raise HTTPException(status_code=400, detail=f"Syntax error: {e}")

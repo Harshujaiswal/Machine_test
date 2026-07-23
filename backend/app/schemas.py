@@ -59,6 +59,7 @@ class CandidateSessionOut(BaseModel):
     time_left_seconds: int
     test_instructions: Optional[str] = None
     questions: List[QuestionOut]
+    saved_answers: dict[int, str] = Field(default_factory=dict)
 
 
 class CandidateAnswerIn(BaseModel):
@@ -69,6 +70,14 @@ class CandidateAnswerIn(BaseModel):
 class CandidateSubmitIn(BaseModel):
     answers: List[CandidateAnswerIn]
     auto_submit_reason: Optional[Literal["fullscreen_violation", "timeout"]] = None
+
+
+class CandidateDraftIn(BaseModel):
+    answers: List[CandidateAnswerIn]
+
+
+class CandidateDraftOut(BaseModel):
+    message: str
 
 
 class CandidateSubmitOut(BaseModel):

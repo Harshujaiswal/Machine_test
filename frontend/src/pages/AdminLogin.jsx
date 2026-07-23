@@ -24,7 +24,7 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#08111f] text-white">
+    <div className="premium-login relative min-h-screen overflow-hidden bg-[#08111f] text-white">
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(250,213,165,0.28)_0%,rgba(82,139,194,0.18)_24%,rgba(8,17,31,0.1)_50%,rgba(3,7,18,0.9)_100%),radial-gradient(circle_at_18%_12%,rgba(252,165,165,0.26),transparent_28%),radial-gradient(circle_at_80%_8%,rgba(96,165,250,0.25),transparent_30%),linear-gradient(135deg,#526f89_0%,#16263f_42%,#09111d_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent_28%,rgba(5,10,20,0.3)_60%,rgba(2,6,23,0.78)_100%)]" />
 

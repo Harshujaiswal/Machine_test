@@ -208,7 +208,7 @@ export default function AdminCandidateDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#eff5fb_0%,#eaf2fa_46%,#f3f7fc_100%)] p-4 md:p-6">
+    <div className="premium-review min-h-screen bg-[linear-gradient(180deg,#eff5fb_0%,#eaf2fa_46%,#f3f7fc_100%)] p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <button
@@ -225,7 +225,7 @@ export default function AdminCandidateDetail() {
 
         {data && (
           <div className="space-y-5">
-            <section className="overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#15233c_0%,#203864_55%,#24508d_100%)] shadow-[0_26px_70px_rgba(15,23,42,0.16)]">
+            <section className="review-hero overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#15233c_0%,#203864_55%,#24508d_100%)] shadow-[0_26px_70px_rgba(15,23,42,0.16)]">
               <div className="relative px-6 py-7 md:px-8 md:py-8">
                 <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
                 <div className="relative flex flex-wrap items-start justify-between gap-5">
@@ -295,7 +295,7 @@ export default function AdminCandidateDetail() {
             {data.questions.map((q) => (
               <section
                 key={q.question_id}
-                className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.06)]"
+                className="review-question overflow-hidden rounded-[1.9rem] border border-white/70 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.06)]"
               >
                 <div className="border-b border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-6 py-5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -414,7 +414,7 @@ export default function AdminCandidateDetail() {
               </section>
             ))}
 
-            <section className="rounded-[1.9rem] border border-white/70 bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.06)]">
+            <section className="review-total rounded-[1.9rem] border border-white/70 bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.06)]">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Total Machine Test Marks</p>
@@ -436,7 +436,7 @@ export default function AdminCandidateDetail() {
 
         {showAiConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-            <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
+            <div className="premium-modal w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
               <h3 className="text-2xl font-black tracking-[-0.04em] text-slate-900">Type Password to continue</h3>
               <input
                 type="text"
