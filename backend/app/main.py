@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
@@ -8,7 +9,17 @@ from .routers import admin, auth, candidate, execution
 from .seed import seed_admins, seed_app_settings, seed_questions
 
 
-app = FastAPI(title=settings.app_name)
+API_PREFIX = os.getenv("API_PREFIX", "").strip().rstrip("/")
+if API_PREFIX and not API_PREFIX.startswith("/"):
+    API_PREFIX = f"/{API_PREFIX}"
+
+app = FastAPI(
+    title=settings.app_name,
+    docs_url=f"{API_PREFIX}/docs",
+    openapi_url=f"{API_PREFIX}/openapi.json",
+    redoc_url=f"{API_PREFIX}/redoc",
+    swagger_ui_oauth2_redirect_url=f"{API_PREFIX}/docs/oauth2-redirect",
+)
 
 
 @app.middleware("http")
@@ -45,12 +56,12 @@ def on_startup():
         db.close()
 
 
-@app.get("/health")
+@app.get(f"{API_PREFIX}/health")
 def health():
     return {"status": "ok"}
 
 
-app.include_router(auth.router)
-app.include_router(admin.router)
-app.include_router(candidate.router)
-app.include_router(execution.router)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(candidate.router, prefix=API_PREFIX)
+app.include_router(execution.router, prefix=API_PREFIX)

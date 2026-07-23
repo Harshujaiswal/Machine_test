@@ -1,9 +1,9 @@
 """Vercel Python Function entrypoint."""
 
-from app.main import app
+import os
 
-# Requests reach this function under /api; FastAPI strips this root path
-# before matching the application's existing /health, /auth, and other routes.
-app.root_path = "/api"
+os.environ["API_PREFIX"] = "/api"
+
+from app.main import app
 
 __all__ = ["app"]
