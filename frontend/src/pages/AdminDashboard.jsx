@@ -24,8 +24,6 @@ export default function AdminDashboard() {
   const [inviteNotice, setInviteNotice] = useState(null);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
-  const [geminiKey, setGeminiKey] = useState("");
-  const [geminiLoading, setGeminiLoading] = useState(false);
   const navigate = useNavigate();
 
   async function loadSubmissions() {
@@ -47,22 +45,8 @@ export default function AdminDashboard() {
     }
   }
 
-  async function loadGeminiKey() {
-    try {
-      const { data } = await api.get("/admin/settings/gemini-key");
-      setGeminiKey(data.gemini_api_key || "");
-    } catch (err) {
-      const detail = err?.response?.data?.detail;
-      if (detail === "Invalid token" || detail === "Admin not found") {
-        setAuthToken(null);
-        navigate("/admin/login");
-      }
-    }
-  }
-
   useEffect(() => {
     loadSubmissions();
-    loadGeminiKey();
   }, []);
 
   useEffect(() => {
@@ -147,33 +131,14 @@ export default function AdminDashboard() {
     }
   }
 
-  async function saveGeminiKey() {
-    setGeminiLoading(true);
-    setError("");
-    try {
-      await api.put("/admin/settings/gemini-key", { gemini_api_key: geminiKey });
-      setInviteNotice({
-        type: "success",
-        title: "Gemini Key Saved",
-        message: "Gemini API key updated successfully.",
-      });
-    } catch (err) {
-      const msg = err?.response?.data?.detail || "Failed to save Gemini API key";
-      setError(msg);
-      setInviteNotice({ type: "error", title: "Save Failed", message: msg });
-    } finally {
-      setGeminiLoading(false);
-    }
-  }
-
   const totalCandidates = submissions.length;
   const submittedCount = submissions.filter((x) => x.is_submitted).length;
   const pendingCount = totalCandidates - submittedCount;
 
   function levelBadgeClass(level) {
-    if (level === "fresher") return "bg-cyan-100/90 text-cyan-700 ring-1 ring-cyan-200";
-    if (level === "intermediate") return "bg-indigo-100/90 text-indigo-700 ring-1 ring-indigo-200";
-    return "bg-violet-100/90 text-violet-700 ring-1 ring-violet-200";
+    if (level === "fresher") return "bg-lime-100/90 text-emerald-950 ring-1 ring-lime-200";
+    if (level === "intermediate") return "bg-emerald-100/90 text-emerald-950 ring-1 ring-emerald-200";
+    return "bg-amber-100/90 text-amber-950 ring-1 ring-amber-200";
   }
 
   function statusBadgeClass(isSubmitted) {
@@ -336,9 +301,9 @@ export default function AdminDashboard() {
                         className="w-full rounded-[1.3rem] border border-slate-300 bg-[linear-gradient(180deg,#fbfdff_0%,#f6f9fe_100%)] px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
                         required
                       >
-                        <option value="fresher">Test Fresher</option>
-                        <option value="intermediate">Test Intermediate</option>
-                        <option value="high">Test High</option>
+                        <option value="fresher">Fresher (0-6 Months)</option>
+                        <option value="intermediate">Intermediate (6 Months-1.6 Years)</option>
+                        <option value="high">High (1.6-4 Years)</option>
                       </select>
                     </div>
                     <div>
@@ -424,30 +389,6 @@ export default function AdminDashboard() {
                 {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
               </div>
 
-              <div className="rounded-[2rem] border border-slate-200 bg-white/[0.94] p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">AI Settings</p>
-                  <h3 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">Gemini API Key</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">Candidate GenAI questions will use this key after page reload.</p>
-                </div>
-                <div className="mt-5 space-y-3">
-                  <input
-                    type="text"
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder="Paste Gemini API key"
-                    className="w-full rounded-[1.3rem] border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
-                  />
-                  <button
-                    type="button"
-                    disabled={geminiLoading}
-                    onClick={saveGeminiKey}
-                    className="w-full rounded-[1.35rem] bg-slate-900 px-4 py-3.5 text-sm font-bold text-white hover:-translate-y-0.5 hover:bg-slate-950 disabled:opacity-60"
-                  >
-                    {geminiLoading ? "Saving..." : "Save Gemini Key"}
-                  </button>
-                </div>
-              </div>
             </div>
 
             <div className="rounded-[2rem] border border-slate-200 bg-white/[0.94] p-6 shadow-[0_18px_44px_rgba(15,23,42,0.045)] backdrop-blur">
@@ -483,6 +424,17 @@ export default function AdminDashboard() {
                               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(item.is_submitted)}`}>
                                 {item.is_submitted ? "Submitted" : "Pending"}
                               </span>
+                              {item.hiring_decision && (
+                                <span
+                                  className={
+                                    item.hiring_decision === "accepted"
+                                      ? "rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-[0_8px_18px_rgba(37,99,235,0.22)] ring-1 ring-blue-700"
+                                      : "rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 ring-1 ring-rose-200"
+                                  }
+                                >
+                                  {item.hiring_decision === "accepted" ? "Accepted" : "Rejected"}
+                                </span>
+                              )}
                             </div>
                             <p className="mt-1 text-sm text-slate-600">{item.candidate_email}</p>
                             {item.is_submitted && (
@@ -491,6 +443,18 @@ export default function AdminDashboard() {
                               </p>
                             )}
                             <p className="mt-1 text-sm text-slate-600">Time Taken: {formatTimeTaken(item.time_taken_seconds)}</p>
+                            {item.decision_reason && (
+                              <div
+                                className={
+                                  item.hiring_decision === "accepted"
+                                    ? "mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950"
+                                    : "mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900"
+                                }
+                              >
+                                <span className="font-bold">Decision reason: </span>
+                                {item.decision_reason}
+                              </div>
+                            )}
                           </div>
 
                           <button

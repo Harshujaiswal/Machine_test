@@ -41,7 +41,7 @@ class GeminiAPIKeyOut(BaseModel):
 class QuestionOut(BaseModel):
     id: int
     order_no: int
-    qtype: Literal["python", "sql"]
+    qtype: Literal["python", "sql", "theory"]
     title: str
     prompt: str
 
@@ -105,6 +105,8 @@ class CandidateSubmissionGroup(BaseModel):
     submitted_at: Optional[datetime] = None
     time_taken_seconds: Optional[int] = None
     machine_test_marks: Optional[int] = None
+    hiring_decision: Optional[str] = None
+    decision_reason: Optional[str] = None
     is_submitted: bool
     submissions: List[CandidateSubmissionItem]
 
@@ -133,6 +135,8 @@ class CandidateSubmissionDetailOut(BaseModel):
     submitted_at: Optional[datetime] = None
     time_taken_seconds: Optional[int] = None
     machine_test_marks: Optional[int] = None
+    hiring_decision: Optional[str] = None
+    decision_reason: Optional[str] = None
     is_submitted: bool
     questions: List[CandidateQuestionAnswerItem]
 
@@ -151,9 +155,32 @@ class SaveCandidateMarksOut(BaseModel):
     machine_test_marks: int
 
 
+class SaveCandidateEvaluationIn(BaseModel):
+    machine_test_marks: int = Field(ge=0, le=10)
+    hiring_decision: Literal["accepted", "rejected"]
+    decision_reason: str = Field(min_length=2, max_length=2000)
+
+
+class SaveCandidateEvaluationOut(BaseModel):
+    message: str
+    machine_test_marks: int
+    hiring_decision: str
+    decision_reason: str
+
+
 class PythonExecuteIn(BaseModel):
     code: str
     stdin: str = ""
+    question_id: Optional[int] = None
+
+
+class PythonTestCaseOut(BaseModel):
+    name: str
+    input: str
+    passed: bool
+    expected: str
+    actual: str
+    error: Optional[str] = None
 
 
 class PythonExecuteOut(BaseModel):
@@ -161,6 +188,9 @@ class PythonExecuteOut(BaseModel):
     stderr: str
     return_code: int
     timed_out: bool = False
+    test_results: List[PythonTestCaseOut] = Field(default_factory=list)
+    passed_tests: int = 0
+    total_tests: int = 0
 
 
 class SQLExecuteIn(BaseModel):

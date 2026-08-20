@@ -26,12 +26,16 @@ class Candidate(Base):
     token_expires_at = Column(DateTime, nullable=False)
     is_submitted = Column(Boolean, default=False)
     test_level = Column(String(20), nullable=False, default="intermediate")
+    question_set_version = Column(Integer, nullable=False, default=1)
     interview_marks = Column(Integer, nullable=True)
     interviewer_name = Column(String(255), nullable=True)
     reviewer_emails = Column(Text, nullable=True)
     test_duration_minutes = Column(Integer, nullable=False, default=60)
     test_started_at = Column(DateTime, nullable=True)
     submission_reason = Column(String(50), nullable=True)
+    manual_machine_test_marks = Column(Integer, nullable=True)
+    hiring_decision = Column(String(20), nullable=True)
+    decision_reason = Column(Text, nullable=True)
     submitted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -49,7 +53,8 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_no = Column(Integer, nullable=False)
     level = Column(String(20), nullable=False, default="intermediate")
-    qtype = Column(String(20), nullable=False)  # python | sql
+    question_set_version = Column(Integer, nullable=False, default=1)
+    qtype = Column(String(20), nullable=False)  # python | sql | theory
     title = Column(String(255), nullable=False)
     prompt = Column(Text, nullable=False)
 

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 const Editor = lazy(() => import("@monaco-editor/react"));
 import { api } from "../api";
+import PythonTestResults from "../components/PythonTestResults";
 
 const EMPLOYEE_COLUMNS = [
   "employee_id",
@@ -246,7 +247,7 @@ export default function CandidateTest() {
     const code = answers[questionId] || "";
     setExecution((prev) => ({ ...prev, [questionId]: { loading: true } }));
     try {
-      const { data } = await api.post("/execute/python", { code, stdin: "" });
+      const { data } = await api.post("/execute/python", { code, stdin: "", question_id: questionId });
       setExecution((prev) => ({ ...prev, [questionId]: { loading: false, ...data } }));
     } catch (err) {
       setExecution((prev) => ({
@@ -480,9 +481,9 @@ export default function CandidateTest() {
                   key={`jump-${q.id}`}
                   type="button"
                   onClick={() => jumpToQuestion(q.id)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
+                  className={`question-nav-button rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
                     filled
-                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      ? "is-answered bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
@@ -493,7 +494,7 @@ export default function CandidateTest() {
           </div>
         </div>
         {session.test_instructions && (
-          <div className="rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fff8e7_0%,#fffdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+          <div className="test-instructions rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fff8e7_0%,#fffdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Instructions</p>
             <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-amber-900 select-none">
               {session.test_instructions}
@@ -506,8 +507,12 @@ export default function CandidateTest() {
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-brand-700 select-none">Q{q.order_no}</p>
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  q.qtype === "python" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                className={`question-type rounded-full px-3 py-1 text-xs font-semibold ${
+                  q.qtype === "python"
+                    ? "bg-blue-100 text-blue-700"
+                    : q.qtype === "sql"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-emerald-100 text-emerald-700"
                 }`}
               >
                 {q.qtype.toUpperCase()}
@@ -530,14 +535,19 @@ export default function CandidateTest() {
                 </div>
                 <button
                   onClick={() => runPython(q.id)}
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  className="test-run-button inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   Run Python
                 </button>
                 {execution[q.id] && !execution[q.id].loading && (
-                  <div className="rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
-                    <p className="font-semibold">Output</p>
-                    <pre className="mt-1 whitespace-pre-wrap">{execution[q.id].stdout || "(no stdout)"}</pre>
+                  <div className="test-output rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
+                    <PythonTestResults result={execution[q.id]} />
+                    {execution[q.id].stdout && (
+                      <>
+                        <p className="font-semibold text-cyan-200">Output</p>
+                        <pre className="mt-1 whitespace-pre-wrap">{execution[q.id].stdout}</pre>
+                      </>
+                    )}
                     {execution[q.id].stderr && (
                       <>
                         <p className="mt-2 font-semibold text-red-300">Errors</p>
@@ -547,9 +557,9 @@ export default function CandidateTest() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : q.qtype === "sql" ? (
               <div className="mt-5 space-y-5">
-                <div className="rounded-[1.15rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="sql-dataset rounded-[1.15rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                   <p className="text-xs font-semibold text-slate-700 select-none">Dataset: employees</p>
                   <p className="mt-1 text-xs text-slate-600 select-none">Columns: {sqlColumns.join(", ")}</p>
                   <div className="mt-2 overflow-auto">
@@ -591,12 +601,12 @@ export default function CandidateTest() {
                 />
                 <button
                   onClick={() => runSQL(q.id)}
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  className="test-run-button inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   Run SQL
                 </button>
                 {execution[q.id] && !execution[q.id].loading && execution[q.id].mode === "sql" && (
-                  <div className="rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
+                  <div className="test-output rounded-[1.1rem] bg-slate-950 p-4 text-xs text-slate-100 shadow-[0_14px_30px_rgba(15,23,42,0.2)]">
                     {execution[q.id].stderr ? (
                       <>
                         <p className="font-semibold text-red-300">Errors</p>
@@ -641,6 +651,22 @@ export default function CandidateTest() {
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="mt-5 rounded-[1.25rem] border border-emerald-200 bg-[linear-gradient(180deg,#f7fffb_0%,#ffffff_100%)] p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 select-none">
+                  Written Response
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600 select-none">
+                  Explain your approach clearly. No API key or executable code is required.
+                </p>
+                <textarea
+                  rows={14}
+                  value={answers[q.id]}
+                  onChange={(e) => setAnswer(q.id, e.target.value)}
+                  className="mt-4 w-full resize-y rounded-[1rem] border border-slate-300 bg-white p-4 text-sm leading-6 text-slate-800 shadow-[0_8px_24px_rgba(15,23,42,0.04)] outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                  placeholder="Write your detailed answer here..."
+                />
+              </div>
             )}
           </div>
         ))}
@@ -655,13 +681,13 @@ export default function CandidateTest() {
               type="button"
               onClick={confirmAndSubmit}
               disabled={submitting}
-              className="rounded-full bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_45%,#06b6d4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60"
+              className="test-submit-button rounded-full bg-[linear-gradient(90deg,#1d4ed8_0%,#2563eb_45%,#06b6d4_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60"
             >
               {submitting ? "Submitting..." : "Submit Test"}
             </button>
           </div>
           {showSubmitConfirm && (
-            <div className="mt-4 rounded-[1.4rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+            <div className="submit-confirm mt-4 rounded-[1.4rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
               <p className="text-sm font-semibold text-slate-900">Are you sure you want to submit your test?</p>
               <div className="mt-4 flex gap-3">
                 <button

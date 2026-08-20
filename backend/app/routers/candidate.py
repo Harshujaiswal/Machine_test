@@ -7,7 +7,14 @@ from ..config import settings
 from ..deps import get_db
 from ..email_utils import send_email
 from ..models import AppSetting, Candidate, Question, Submission
-from ..seed import HIGH_TEST_INSTRUCTIONS
+from ..seed import (
+    FRESHER_TEST_INSTRUCTIONS,
+    HIGH_TEST_INSTRUCTIONS,
+    HIGH_TEST_INSTRUCTIONS_V1,
+    HIGH_TEST_INSTRUCTIONS_V3,
+    HIGH_TEST_INSTRUCTIONS_V4,
+    INTERMEDIATE_TEST_INSTRUCTIONS,
+)
 from ..schemas import CandidateDraftIn, CandidateDraftOut, CandidateSessionOut, CandidateSubmitIn, CandidateSubmitOut
 
 
@@ -59,7 +66,10 @@ def get_candidate_session(token: str, db: Session = Depends(get_db)):
 
     questions = (
         db.query(Question)
-        .filter(Question.level == candidate.test_level)
+        .filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        )
         .order_by(Question.order_no.asc())
         .all()
     )
@@ -94,7 +104,21 @@ def get_candidate_session(token: str, db: Session = Depends(get_db)):
         "test_ends_at": test_ends_at,
         "test_ends_at_ts": int(test_ends_at.timestamp()),
         "time_left_seconds": time_left_seconds,
-        "test_instructions": HIGH_TEST_INSTRUCTIONS if candidate.test_level == "high" else None,
+        "test_instructions": (
+            FRESHER_TEST_INSTRUCTIONS
+            if candidate.test_level == "fresher" and candidate.question_set_version >= 3
+            else INTERMEDIATE_TEST_INSTRUCTIONS
+            if candidate.test_level == "intermediate" and candidate.question_set_version >= 6
+            else HIGH_TEST_INSTRUCTIONS
+            if candidate.test_level == "high" and candidate.question_set_version >= 5
+            else HIGH_TEST_INSTRUCTIONS_V4
+            if candidate.test_level == "high" and candidate.question_set_version >= 4
+            else HIGH_TEST_INSTRUCTIONS_V3
+            if candidate.test_level == "high" and candidate.question_set_version >= 3
+            else HIGH_TEST_INSTRUCTIONS_V1
+            if candidate.test_level == "high"
+            else None
+        ),
         "questions": question_payload,
         "saved_answers": saved_answers,
     }
@@ -111,7 +135,10 @@ def save_draft(token: str, payload: CandidateDraftIn, db: Session = Depends(get_
         db.refresh(candidate)
 
     question_ids = {
-        q.id for q in db.query(Question.id).filter(Question.level == candidate.test_level).all()
+        q.id for q in db.query(Question.id).filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        ).all()
     }
 
     for ans in payload.answers:
@@ -157,7 +184,10 @@ def submit_test(token: str, payload: CandidateSubmitIn, db: Session = Depends(ge
     timed_out = datetime.utcnow() >= test_ends_at
 
     question_ids = {
-        q.id for q in db.query(Question.id).filter(Question.level == candidate.test_level).all()
+        q.id for q in db.query(Question.id).filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        ).all()
     }
 
     for ans in payload.answers:

@@ -13,6 +13,7 @@ from ..config import settings
 from ..deps import get_current_admin, get_db
 from ..email_utils import send_email
 from ..models import AppSetting, Candidate, EvaluationMark, Question, Submission
+from ..seed import CURRENT_QUESTION_VERSIONS
 from ..schemas import (
     AIAutoGradeIn,
     AIAutoGradeOut,
@@ -26,6 +27,8 @@ from ..schemas import (
     InviteCandidateResponse,
     SaveCandidateMarksIn,
     SaveCandidateMarksOut,
+    SaveCandidateEvaluationIn,
+    SaveCandidateEvaluationOut,
 )
 
 
@@ -128,6 +131,7 @@ def invite_candidate(
         invite_token=token,
         token_expires_at=expires_at,
         test_level=payload.test_level,
+        question_set_version=CURRENT_QUESTION_VERSIONS.get(payload.test_level, 1),
         interview_marks=payload.interview_marks,
         interviewer_name=(payload.interviewer_name or "").strip() or None,
         reviewer_emails=",".join(reviewer_emails) if reviewer_emails else None,
@@ -301,7 +305,12 @@ def get_submissions(db: Session = Depends(get_db), _admin=Depends(get_current_ad
                     updated_at=sub.updated_at,
                 )
             )
-        machine_test_marks = sum(m.marks for m in (candidate.evaluation_marks or []))
+        calculated_marks = sum(m.marks for m in (candidate.evaluation_marks or []))
+        machine_test_marks = (
+            candidate.manual_machine_test_marks
+            if candidate.manual_machine_test_marks is not None
+            else calculated_marks
+        )
         data.append(
             CandidateSubmissionGroup(
                 candidate_id=candidate.id,
@@ -316,6 +325,8 @@ def get_submissions(db: Session = Depends(get_db), _admin=Depends(get_current_ad
                 submitted_at=candidate.submitted_at,
                 time_taken_seconds=time_taken_seconds,
                 machine_test_marks=machine_test_marks,
+                hiring_decision=candidate.hiring_decision,
+                decision_reason=candidate.decision_reason,
                 is_submitted=candidate.is_submitted,
                 submissions=items,
             )
@@ -335,7 +346,10 @@ def get_candidate_submission_detail(
 
     questions = (
         db.query(Question)
-        .filter(Question.level == candidate.test_level)
+        .filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        )
         .order_by(Question.order_no.asc())
         .all()
     )
@@ -384,7 +398,13 @@ def get_candidate_submission_detail(
         submission_reason=candidate.submission_reason,
         submitted_at=candidate.submitted_at,
         time_taken_seconds=time_taken_seconds,
-        machine_test_marks=sum(marks_by_question.values()) if marks_by_question else 0,
+        machine_test_marks=(
+            candidate.manual_machine_test_marks
+            if candidate.manual_machine_test_marks is not None
+            else (sum(marks_by_question.values()) if marks_by_question else 0)
+        ),
+        hiring_decision=candidate.hiring_decision,
+        decision_reason=candidate.decision_reason,
         is_submitted=candidate.is_submitted,
         questions=question_answers,
     )
@@ -402,7 +422,10 @@ def save_candidate_marks(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
     valid_question_ids = {
-        q.id for q in db.query(Question.id).filter(Question.level == candidate.test_level).all()
+        q.id for q in db.query(Question.id).filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        ).all()
     }
     for item in payload.marks:
         if item.question_id not in valid_question_ids:
@@ -433,7 +456,43 @@ def save_candidate_marks(
         .filter(EvaluationMark.candidate_id == candidate_id)
         .scalar()
     )
-    return {"message": "Machine test marks saved successfully", "machine_test_marks": int(total_marks or 0)}
+    displayed_marks = (
+        candidate.manual_machine_test_marks
+        if candidate.manual_machine_test_marks is not None
+        else int(total_marks or 0)
+    )
+    return {"message": "Machine test marks saved successfully", "machine_test_marks": displayed_marks}
+
+@router.put("/submissions/{candidate_id}/evaluation", response_model=SaveCandidateEvaluationOut)
+def save_candidate_evaluation(
+    candidate_id: int,
+    payload: SaveCandidateEvaluationIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(get_current_admin),
+):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+
+    reason = payload.decision_reason.strip()
+    if len(reason) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Decision reason is required",
+        )
+
+    candidate.manual_machine_test_marks = payload.machine_test_marks
+    candidate.hiring_decision = payload.hiring_decision
+    candidate.decision_reason = reason
+    db.commit()
+
+    return {
+        "message": "Candidate evaluation saved successfully",
+        "machine_test_marks": candidate.manual_machine_test_marks,
+        "hiring_decision": candidate.hiring_decision,
+        "decision_reason": candidate.decision_reason,
+    }
+
 
 @router.post("/submissions/{candidate_id}/ai-grade", response_model=AIAutoGradeOut)
 @router.post("/submissions/{candidate_id}/ai_grade", response_model=AIAutoGradeOut)
@@ -444,7 +503,10 @@ def ai_grade_candidate(candidate_id: int, payload: AIAutoGradeIn | None = None, 
 
     questions = (
         db.query(Question)
-        .filter(Question.level == candidate.test_level)
+        .filter(
+            Question.level == candidate.test_level,
+            Question.question_set_version == candidate.question_set_version,
+        )
         .order_by(Question.order_no.asc())
         .all()
     )
